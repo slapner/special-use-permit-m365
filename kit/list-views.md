@@ -1,6 +1,6 @@
 # Permits list — views and column formatting
 
-> **UNTESTED against a live tenant.** `Provision-SUPSite.ps1` creates every view and applies all three formatters automatically. This page is the reference if you need to rebuild them by hand or check what the script did.
+> **UNTESTED against a live tenant.** `Provision-SUPSite.ps1` creates the six Permits views below, the *Changed this year* view on ConditionLibrary (section 7), and applies all three formatters automatically. This page is the reference if you need to rebuild them by hand or check what the script did. These are the same six view names and filters as build guide Step 1.5, and the same *Changed this year* view as Step 2.4.
 
 Status groups used below:
 
@@ -123,6 +123,23 @@ CAML and the view UI have no "start of this year" token. Two options:
   <Geq><FieldRef Name='ClosedDate'/><Value Type='DateTime'><Today OffsetDays='-365'/></Value></Geq>
   <!-- option B: <Geq><FieldRef Name='ClosedDate'/><Value Type='DateTime'>2026-01-01T00:00:00Z</Value></Geq> -->
 </And></Where>
+```
+
+## 7. Changed this year (ConditionLibrary)
+This view is on **ConditionLibrary**, not Permits. Use it for the yearly review of condition wording (build guide Step 2.4). Like view 6, it is a rolling window, so it needs no yearly edit.
+
+| | |
+|---|---|
+| Filter | Modified ≥ `[Today]-365` |
+| Sort | Modified descending |
+| Columns | Title, Condition Code, Category, Active, Modified, Modified By |
+| UI recipe | Modified *is greater than or equal to* `[Today]-365` (one condition, safe in the UI) |
+
+```xml
+<OrderBy><FieldRef Name='Modified' Ascending='FALSE'/></OrderBy>
+<Where>
+  <Geq><FieldRef Name='Modified'/><Value Type='DateTime'><Today OffsetDays='-365'/></Value></Geq>
+</Where>
 ```
 
 ---

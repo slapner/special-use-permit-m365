@@ -1,7 +1,7 @@
 #Requires -Version 7.4
 <#
 .SYNOPSIS
-    Provisions the Special Use Permit (SUP) SharePoint site, lists, library, groups, views and seed data.
+    Provisions the Special Use Permit (SUP) SharePoint site, lists, libraries, groups, views and seed data.
 
 .DESCRIPTION
     *** UNTESTED AGAINST A LIVE TENANT — RUN IN A TEST TENANT / TEST SITE ALIAS FIRST. ***
@@ -26,6 +26,15 @@
     It does NOT modify columns that already exist (re-run safe, but it will not "fix" a wrong column).
     Supports -WhatIf: read-only checks run, every create/modify step is only reported.
 
+    Creates: the communication site; 7 lists; the Permit Records library (Open Projects, Closed Projects,
+    _Templates); the owners-only SUP Admin library (solution backups); the 5 SUP groups and permissions;
+    indexes; the 6 Permits views and the "Changed this year" view on ConditionLibrary; column formatting;
+    Settings rows (including blank Approvers, DefaultCoordinator and DefaultSuperintendent rows);
+    PermitTypes and ConditionLibrary seed data; optionally sample permits.
+
+    Does NOT: add the flow service account to SUP Owners (do this by hand: see README), set the site
+    time zone, add people to the groups, or empty the site's two default groups.
+
 .PARAMETER TenantUrl
     Root SharePoint URL, e.g. https://contoso.sharepoint.com
 
@@ -43,6 +52,22 @@
 .PARAMETER AzureEnvironment
     Production (commercial, default), USGovernment (GCC), USGovernmentHigh (GCC High) or USGovernmentDoD.
 
+.PARAMETER ProgramMailbox
+    Value for the Settings row ProgramMailbox (the shared mailbox). Default sup-permits@agency.example.
+
+.PARAMETER Approvers
+    Value for the Settings row Approvers: approving officials' emails separated by ";" with no spaces.
+    Read by the app (formula 6-A). Default blank; a blank row means nobody is treated as an approver.
+    Like every Settings value, it is written only when the row is first created; later runs skip the row.
+
+.PARAMETER DefaultCoordinator
+    Value for the Settings row DefaultCoordinator: one email address, used by F1b add-on A.
+    Default blank; a blank row leaves Coordinator empty. A wrong address makes F1b fail.
+
+.PARAMETER DefaultSuperintendent
+    Value for the Settings row DefaultSuperintendent: one email address, used by F1b add-on A.
+    Default blank; a blank row leaves Superintendent empty.
+
 .PARAMETER ImportSamplePermits
     Also import Permits-sample.csv (12 fictitious permits) with folders. Test sites only.
     Sample dates are written relative to 2026-11-23 and shifted so they stay relative to today.
@@ -59,6 +84,9 @@ param(
     [ValidateSet('Production', 'USGovernment', 'USGovernmentHigh', 'USGovernmentDoD')] [string] $AzureEnvironment = 'Production',
     [string] $SiteTitle = 'Special Use Permits',
     [string] $ProgramMailbox = 'sup-permits@agency.example',
+    [string] $Approvers = '',
+    [string] $DefaultCoordinator = '',
+    [string] $DefaultSuperintendent = '',
     [string] $KitPath = $PSScriptRoot,
     [switch] $ImportSamplePermits
 )
@@ -339,7 +367,7 @@ foreach ($l in 'Permits', 'PermitConditions', 'AuditLog', 'ComplianceItems') {
     }
 }
 if (Get-ListOrNull 'Permits') {
-    # Versioning is required by F7 (status before/after via item versions).
+    # Versioning is required by F7b and F2a (Get changes; status before/after via item versions).
     Invoke-Step 'Permits' 'Enable versioning (100 major)' { Set-PnPList -Identity Permits -EnableVersioning $true -MajorVersions 100 | Out-Null }
 }
 if (Get-ListOrNull 'Settings') {
@@ -373,12 +401,22 @@ if ($lib) {
 }
 elseif (-not $WhatIfPreference) { $script:Failures.Add('PermitRecords library not found: columns, versioning and folders not configured') }
 
+# SUP Admin: owners-only library for solution exports (build guide Steps 1.3 item 7, 1.6 item 5 and 8.4).
+# Permissions are set in section 4 (unique permissions, SUP Owners only).
+Write-Step 'Library SUPAdmin'
+Ensure-List -Title 'SUPAdmin' -Url 'SUPAdmin' -Template DocumentLibrary -DisplayTitle 'SUP Admin'
+$adminLib = Get-ListOrNull 'SUPAdmin'
+if ($adminLib -and $adminLib.Title -ne 'SUP Admin') {
+    Invoke-Step 'SUPAdmin' 'Set display name SUP Admin' { Set-PnPList -Identity 'SUPAdmin' -Title 'SUP Admin' | Out-Null }
+}
+
 # =============================================================================================
 # 4. Groups and permissions
 #    Site level: SUP Owners = Full Control (associated owners group), SUP Coordinators = Contribute,
 #                SUP Compliance / SUP Approving Officials / SUP Viewers = Read.
 #    ComplianceItems + Permit Records: unique perms, SUP Compliance = Contribute.
 #    AuditLog, Settings, ConditionLibrary: unique perms, only owners can edit; everyone else Read (flows' connection account must be in SUP Owners).
+#    SUP Admin: unique perms, SUP Owners only (no other SUP group is granted).
 #    NOTE: role names "Full Control/Contribute/Read" are the English role definition names.
 # =============================================================================================
 Write-Step 'SharePoint groups'
@@ -412,6 +450,7 @@ $UniquePerms = [ordered]@{
     'AuditLog'        = [ordered]@{ 'SUP Owners' = 'Full Control'; 'SUP Coordinators' = 'Read'; 'SUP Compliance' = 'Read'; 'SUP Approving Officials' = 'Read'; 'SUP Viewers' = 'Read' }
     'Settings'        = [ordered]@{ 'SUP Owners' = 'Full Control'; 'SUP Coordinators' = 'Read'; 'SUP Compliance' = 'Read'; 'SUP Approving Officials' = 'Read'; 'SUP Viewers' = 'Read' }
     'ConditionLibrary'= [ordered]@{ 'SUP Owners' = 'Full Control'; 'SUP Coordinators' = 'Read'; 'SUP Compliance' = 'Read'; 'SUP Approving Officials' = 'Read'; 'SUP Viewers' = 'Read' }
+    'SUPAdmin'        = [ordered]@{ 'SUP Owners' = 'Full Control' }
 }
 foreach ($l in $UniquePerms.Keys) {
     $list = Get-OrNull { Get-PnPList -Identity $l -Includes HasUniqueRoleAssignments -ErrorAction Stop }
@@ -438,7 +477,11 @@ $SettingsSeed = [ordered]@{
     ReminderDaysStartUnexecuted = '30,14,7'
     ProgramMailbox              = $ProgramMailbox
     "NextSeq_$year"             = '1'
-    "NextSeq_$($year + 1)"      = '1'   # pre-seeded for year rollover; F1 also creates it if missing
+    "NextSeq_$($year + 1)"      = '1'   # pre-seeded for year rollover; F1b also creates it if missing
+    # Optional rows (build guide Step 1.2). Blank by default: a blank value is ignored by the app and by F1b add-on A.
+    Approvers                   = $Approvers
+    DefaultCoordinator          = $DefaultCoordinator
+    DefaultSuperintendent       = $DefaultSuperintendent
 }
 foreach ($k in $SettingsSeed.Keys) {
     if (Find-Item 'Settings' 'Title' $k) { Write-Skip "setting $k exists"; continue }
@@ -534,6 +577,18 @@ if (Get-ListOrNull 'Permits') {
     Invoke-Step 'Permits.ProposedStart' 'Apply start-date formatting' { Set-PnPField -List Permits -Identity ProposedStart -Values @{ CustomFormatter = $start } | Out-Null }
 }
 
+# "Changed this year" on ConditionLibrary (build guide Step 2.4; list-views.md section 7): rolling 365 days on Modified.
+Write-Step 'ConditionLibrary view'
+$ChangedView = 'Changed this year'
+if (Get-ListOrNull 'ConditionLibrary') {
+    if (Get-OrNull { Get-PnPView -List ConditionLibrary -Identity $ChangedView -ErrorAction Stop }) { Write-Skip "view $ChangedView exists" }
+    else {
+        Invoke-Step "ConditionLibrary/$ChangedView" 'Add view' {
+            Add-PnPView -List ConditionLibrary -Title $ChangedView -Fields @('LinkTitle', 'ConditionCode', 'Category', 'Active', 'Modified', 'Editor') -Query "<OrderBy><FieldRef Name='Modified' Ascending='FALSE'/></OrderBy><Where><Geq><FieldRef Name='Modified'/><Value Type='DateTime'><Today OffsetDays='-365'/></Value></Geq></Where>" -RowLimit 100 -Paged | Out-Null
+        }
+    }
+}
+
 # =============================================================================================
 # 7. Optional: sample permits (TEST SITES ONLY)
 # =============================================================================================
@@ -575,7 +630,7 @@ if ($ImportSamplePermits) {
         $parts = $row.PermitNumber -split '-'
         $maxSeq[$parts[1]] = [Math]::Max([int]($maxSeq[$parts[1]] ?? 0), [int]$parts[2])
     }
-    # Keep F1 numbering ahead of the sample numbers.
+    # Keep F1b numbering ahead of the sample numbers.
     foreach ($y in $maxSeq.Keys) {
         $item = Find-Item 'Settings' 'Title' "NextSeq_$y"
         $next = $maxSeq[$y] + 1
@@ -597,4 +652,5 @@ if ($script:Failures.Count) {
     exit 1
 }
 Write-Host "Provisioning complete: $SiteUrl" -ForegroundColor Green
-Write-Host 'Next: upload Word templates to Permit Records/_Templates, then build the flows in flows.md.' -ForegroundColor Green
+Write-Host 'Next (by hand): add the flow service account to SUP Owners, set the site time zone, add people to the groups,' -ForegroundColor Yellow
+Write-Host '      upload Word templates to Permit Records/_Templates, then build the flows in flows.md (README run order).' -ForegroundColor Yellow
