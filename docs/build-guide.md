@@ -225,7 +225,7 @@ Run order:
 4. On the test site only, run it again with `-ImportSamplePermits` added. This loads 12 fictitious permits with folders.
 5. Add the service account to **SUP Owners**. The script does not do this.
 6. Add people to the other four groups, and empty the two default groups (Step 1.6).
-7. Create the **SUP Admin** library and the *Changed this year* view by hand (Steps 1.3 and 2.4). The script does not create them.
+7. Create the **SUP Admin** library and the *Changed this year* view by hand (Steps 1.3 and 2.4), unless you ran the script, which creates both.
 8. Work through the checks in Step 1.7.
 
 For production, run the script without `-SiteAlias` and without `-ImportSamplePermits`. Pass `-ProgramMailbox` with the real shared mailbox address.
@@ -289,10 +289,10 @@ Add your real permit types. The kit seeds these six.
 | `ProgramMailbox` | The shared mailbox address | F1b, F5, F6 |
 | `NextSeq_2026` | `1` | F1b: the next permit sequence number for that year |
 | `NextSeq_2027` | `1` | F1b: ready for the January rollover |
-| `Approvers` (optional) | Approving officials' emails, separated by `;` | The app (Phase 6). Add by hand |
-| `DefaultCoordinator`, `DefaultSuperintendent` (optional) | One email address each | F1b add-on A. Add by hand |
+| `Approvers` (optional) | Approving officials' emails, with no spaces, separated by `;` | The app (Phase 6). The script creates it blank; fill it in |
+| `DefaultCoordinator`, `DefaultSuperintendent` (optional) | One email address each | F1b add-on A. The script creates them blank; fill them in |
 
-The script seeds the first six rows. Settings holds the permit number counter, so only owners may edit it (Step 1.6).
+The script seeds every row, leaving the last two rows' values blank. Settings holds the permit number counter, so only owners may edit it (Step 1.6).
 
 #### Permits list columns
 
@@ -349,7 +349,7 @@ Flow expressions use the internal name. The flow designer and Power Apps show th
 4. Create three folders at the top: `Open Projects`, `Closed Projects` and `_Templates`.
 5. Upload the Word permit templates to `_Templates`. Their file names must match each PermitTypes row's **Template File**.
 6. Open **Library settings → Versioning settings**. Keep major versions, with a limit of 100.
-7. Create a second document library named `SUPAdmin`, display name **SUP Admin**. It holds solution backups (Step 8.4). The script does not create it.
+7. Create a second document library named `SUPAdmin`, display name **SUP Admin**. It holds solution backups (Step 8.4). The script creates it.
 
 Templates live in `Permit Records/_Templates`, not in a separate library. F3's standard-licence version depends on that.
 
@@ -410,7 +410,7 @@ Coordinators get **Contribute**, not Edit. Edit would let them delete lists and 
 5. On **SUP Admin**, stop inheriting and remove every group except SUP Owners.
 6. Empty or remove the site's two default groups, *Special Use Permits Members* and *Special Use Permits Visitors*.
 
-The script does items 1, 3 and 4. It adds the `-OwnerEmail` person to SUP Owners, but not the service account.
+The script does items 1, 3, 4 and 5. It adds the `-OwnerEmail` person to SUP Owners, but not the service account.
 
 The program lead who maintains condition wording goes in **SUP Owners**. If you would rather not make them an owner, give them **Contribute** on ConditionLibrary alone.
 
@@ -492,7 +492,7 @@ Suggestions are a starting point. The coordinator confirms or removes each one a
 
 - Retire a condition by setting **Active** to No. Never delete one, so old permits still link to it.
 - Only SUP Owners can edit the library (Step 1.6). The program lead is in that group, or has **Contribute** on this list alone. Everyone else has Read.
-- Create a view named *Changed this year* by hand: filter **Modified** is on or after `[Today]-365`, sorted by Modified, descending. The script does not create it.
+- Create a view named *Changed this year* by hand: filter **Modified** is on or after `[Today]-365`, sorted by Modified, descending. The script creates it.
 - Review the library once a year, using that view to see what moved.
 
 ## Phase 3: Intake form
@@ -603,7 +603,7 @@ With no e-signature service, F4c replaces F4a and F4b, so 12 flows stay on. With
 | 13 | F9 | `SUP – Stamp Permit Number` | File created in Permit Records | 5 | Standard |
 | Once | F10 | `SUP – Migration Folder Match` | Run by hand (Phase 9) | Migration | Standard |
 
-How the IDs map to `kit/flows.md`: F2a and F2b are the kit's "F2 option A" and "F2 option B". F4c is the kit's "F4 Standard fallback". F4d is the kit's file-arrival flow for SharePoint eSignature. F8, F9 and F10 are not in the kit.
+How the IDs map to `kit/flows.md`: F2a and F2b are the kit's "F2 option A" and "F2 option B". F4c is the kit's "F4 Standard fallback". F4d is the kit's file-arrival flow for SharePoint eSignature. The kit now uses these same IDs and includes F8, F9 and F10.
 
 The dash in a flow name is only a label, so a hyphen works too. The three names without spaces matter: the app calls those flows by name.
 
@@ -865,7 +865,7 @@ Folder: @{outputs('Compose_TenantRoot')}@{replace(outputs('Compose_FolderPath'),
 
 #### Add-on A — default Coordinator and Superintendent
 
-Use this when one coordinator and one Superintendent handle most permits. It is not in the kit, and the setup script does not create the two Settings rows.
+Use this when one coordinator and one Superintendent handle most permits. The setup script creates the two Settings rows blank; fill in the email addresses.
 
 1. In **Settings**, add rows `DefaultCoordinator` and `DefaultSuperintendent`. Each **Value** is one email address.
 2. Before action 16, add **Get items** renamed **Get items DefCoord**: list **Settings**, Filter Query `Title eq 'DefaultCoordinator'`, Top Count `1`.
@@ -888,7 +888,7 @@ if(empty(triggerBody()?['Superintendent']?['Claims']), if(empty(first(body('Get_
 
 #### Add-on B — acknowledgement email to the applicant
 
-Use this with the reply-with-files option in Phase 3. It is not in the kit. Replies must reach the shared mailbox, so the email is sent from that mailbox.
+Use this with the reply-with-files option in Phase 3. Replies must reach the shared mailbox, so the email is sent from that mailbox.
 
 Add these two actions after action 19.
 
@@ -1108,7 +1108,7 @@ Status is re-sent in action 12 so the update cannot blank it.
 
 ### F8 — Mailbox attachments
 
-F8 saves attachments from emails in the shared mailbox into the right permit folder. It reads the permit number from the subject line. It is not in the kit.
+F8 saves attachments from emails in the shared mailbox into the right permit folder. It reads the permit number from the subject line.
 
 F8 cannot tell a certificate of insurance from a site plan. It files everything as Correspondence. The coordinator then renames the file and sets its **Doc Type**.
 
@@ -1433,12 +1433,12 @@ Notes on version 1:
 - Every response action in a flow must return the same outputs. Add an empty Text output `conditions` to action 5Y.1 as well.
 - Action 16's two `null` values reset the signature fields when a draft is regenerated. Cancel any request already out in the e-signature service by hand.
 - F7b logs the status change. The audit row here logs the document.
-- The kit describes **Copy file** followed by a rename. No standard action renames a file, so this guide creates the file under its final name instead.
+- **No standard action renames a file, so the flow creates the file under its final name instead of copying and renaming**.
 - *Test in your tenant:* confirm the two signature columns are blank after a run. If a `null` is ignored, clear the two columns by hand in grid view.
 - *Test in your tenant:* open a generated draft in Word and confirm the permit number shows. The first open can take a minute to refresh.
 - Until the app exists, nobody sees the response. Add a temporary **Send an email (V2)** before action 18 that sends the link and `outputs('Compose_ConditionsBlock')` to the coordinator.
 
-Add-on — more fields through Quick Parts. This is not in the kit, and the setup script does not create the columns.
+Add-on — more fields through Quick Parts. The setup script does not create these columns.
 
 1. In **Permit Records**, add single-line text columns `ApplicantName`, `LocationName`, `ProposedStart`, `ProposedEnd` and `PermitExpiration`. Text columns let the flow send dates already written out.
 2. In action 15, fill each new column from **Get item Permit**. For the dates, use the null-safe pattern under Version 2.
@@ -1590,7 +1590,7 @@ Notes on the shared actions:
 - Action 6 marks the permit before anything is sent. A second press of the button then stops at action 5.
 - If F4a fails after action 6, the permit keeps `PENDING`. Regenerate the draft to clear it, then send again.
 - *Test in your tenant:* run actions 1 to 11 on a test permit and open the PDF from run history. **Convert file** works on files in the account's own OneDrive, not on SharePoint files.
-- **The kit's sheet uses a Premium action here:** Word Online (Business) **Convert Word Document to PDF**. This guide uses the Standard OneDrive actions so paths A and B need no Premium licence. To use the Premium action, replace actions 8, 9 and 11 with it and set **Compose PdfContent** to its output.
+- **Premium alternative:** Word Online (Business) **Convert Word Document to PDF**. This guide uses the Standard OneDrive actions so paths A and B need no Premium licence. To use the Premium action, replace actions 8, 9 and 11 with it and set **Compose PdfContent** to its output.
 - If your service accepts Word files, you can skip the conversion. Set **Compose PdfContent** to `body('Get_file_content')` and end the document name in `.docx`.
 
 #### Path A — DocuSign actions
@@ -1777,7 +1777,7 @@ The upload starts F4c. Renaming a file already in the folder does not start it, 
 @contains(triggerBody()?['{FilenameWithExtension}'], '_DraftPermit_v')
 ```
 
-The second row is not in the kit. It stops a reply that F8 filed from starting the approval before a person has checked it.
+The second row stops a reply that F8 filed from starting the approval before a person has checked it.
 
 #### F4c — actions
 
@@ -1873,7 +1873,7 @@ Notes on path C:
 SharePoint eSignature has no Power Automate trigger or action. The coordinator starts each request by hand and records the dates. Microsoft documents it for the commercial cloud only.
 
 1. The coordinator saves the draft as a PDF, as in path C step 1. Requests accept PDF files only.
-2. In the permit folder, open the PDF and start a signature request. Microsoft's page says to select the pen icon, **Get signatures**, in the viewer. The kit names the menu item **Request signatures**.
+2. In the permit folder, open the PDF and start a signature request. Microsoft's page says to select the pen icon, **Get signatures**, in the viewer. Older pages call it **Request signatures**.
 3. Add the permittee first and the Superintendent second. Turn on **Recipients must sign in order**.
 4. Set **Status** to `Out for Permittee Signature`.
 5. When the service emails that the permittee has signed, enter **Permittee Signed** and set the status to `Out for Superintendent Signature`.
@@ -1890,7 +1890,7 @@ Once the test shows how signed copies are named, F4d can do steps 6 and 7. Build
 
 ### F9 — Stamp the permit number on uploaded files
 
-F9 writes the permit number on every file a person adds to a permit folder. The app's Documents screen finds files by that number, so without F9 it misses hand-uploaded files. F9 is not in the kit. Build it with the app in Phase 6.
+F9 writes the permit number on every file a person adds to a permit folder. The app's Documents screen finds files by that number, so without F9 it misses hand-uploaded files. Build it with the app in Phase 6.
 
 #### Trigger and settings
 
@@ -2056,7 +2056,7 @@ For **Select StartRows**, Reminder is `Start date, not executed`. `ProposedStart
 Expression F6-A — one date clause per reminder offset. Inside the text, two single quotes stand for one:
 
 ```
-concat('PermitExpiration eq ''', formatDateTime(addDays(utcNow(), int(trim(item()))), 'yyyy-MM-dd'), '''')
+concat('PermitExpiration eq ''', formatDateTime(addDays(convertFromUtc(utcNow(), 'Eastern Standard Time'), int(trim(item()))), 'yyyy-MM-dd'), '''')
 ```
 
 Text F6-B — Filter Query for permit expiration:
@@ -2122,11 +2122,11 @@ With today as 2026-11-23, Text F6-B resolves to this:
 - The Link column holds a plain web address, which email programs turn into a link. **Create HTML table** would show an HTML link tag as text.
 - For table borders, wrap the table in `replace(body('Create_HTML_table'), '<table>', '<table border="1" cellpadding="4" style="border-collapse:collapse">')`.
 - Keep at least one number in each reminder setting. An empty setting makes its query fail.
-- Time zone: at 7:00 in any US state, the UTC date and the local date are the same. For an evening schedule, or an office ahead of UTC such as Guam, replace `utcNow()` in expression F6-A with `convertFromUtc(utcNow(), 'Eastern Standard Time')`.
+- Time zone: expression F6-A works out dates in local time, so it matches **Compose Today** at any hour. Replace `'Eastern Standard Time'` with your site's Windows time-zone ID.
 
 *Test in your tenant:* set one test permit's Permit Expiration to exactly 30 days out and run the flow. If the permit is missed, the exact-date filter does not match date-only values in your site's time zone. Use one of these instead:
 
-- A date range in each clause: `(PermitExpiration ge 'D' and PermitExpiration lt 'D+1')`. Build `D+1` with `addDays(utcNow(), add(int(trim(item())), 1))`.
+- A date range in each clause: `(PermitExpiration ge 'D' and PermitExpiration lt 'D+1')`. Build `D+1` with `addDays(convertFromUtc(utcNow(), 'Eastern Standard Time'), add(int(trim(item())), 1))`.
 - No date clause in the query. Filter in the flow by comparing `formatDateTime(item()?['PermitExpiration'], 'yyyy-MM-dd')` with the wanted dates.
 
 ### Optional additions
@@ -2816,15 +2816,15 @@ Everything below is in the project repository, [special-use-permit-m365](https:/
 | --- | --- |
 | `kit/Provision-SUPSite.ps1` | PnP PowerShell script that builds Phase 1 in one run: the Communication site, seven lists, columns, indexes, the library and its three folders, views, column formats, the five groups, permissions and seed data. Needs PowerShell 7.4 or later, PnP.PowerShell 3, the SharePoint Administrator role and your own Entra app registration (`Register-PnPEntraIDAppForInteractiveLogin`). Government clouds add `-AzureEnvironment`. |
 | `kit/README.md` | Prerequisites, run order and a validation checklist for the script. |
-| `kit/flows.md` | Build sheets for flows F1a to F7b, with every expression and extra notes. This guide uses the same flow IDs, action names and expressions. Flows F8, F9 and F10 are only in this guide. |
-| `kit/list-views.md` | The six tracker views, with the exact filter for each, and how to apply the column formats. |
+| `kit/flows.md` | Build sheets for flows F1a to F10, with every expression and extra notes. This guide uses the same flow IDs, action names and expressions. |
+| `kit/list-views.md` | The six tracker views plus Changed this year, with the exact filter for each, and how to apply the column formats. |
 | `kit/formatting/` | Three column formats: `status-pill.json` for Status, `date-overdue.json` for Permit Expiration and COI Expiration, and `date-start.json` for Proposed Start. |
 | `kit/PermitTypes-seed.csv` | The six sample permit types, with template path and default term. |
 | `kit/ConditionLibrary-seed.csv` | 24 sample conditions already tagged with triggers, including the archaeological, erosion, buffer and tricolored bat examples. Replace the wording with your own library. |
 | `kit/Permits-sample.csv` | 12 fictitious permits covering all ten statuses, for Step 9.1. Test sites only. |
 | `spec/` | The data model, the Microsoft facts checked for this guide, and the independent reviews. |
 
-How this guide's flow IDs map to the kit:
+The kit uses the same flow IDs as this guide. What each was called in earlier versions of the kit:
 
 | This guide | `kit/flows.md` |
 | --- | --- |
@@ -2833,7 +2833,7 @@ How this guide's flow IDs map to the kit:
 | F4a, F4b | F4a Send, F4b Status callback (DocuSign or Adobe Acrobat Sign) |
 | F4c | F4 Standard fallback: signed upload plus Approvals |
 | F4d | The file-arrival flow described under SharePoint eSignature |
-| F8, F9, F10 | Not in the kit |
+| F8, F9, F10 | New in this version |
 
 ### Clickable preview
 

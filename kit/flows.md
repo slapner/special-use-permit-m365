@@ -656,7 +656,7 @@ For **Select StartRows**, Reminder is `Start date, not executed`. `ProposedStart
 Expression F6-A — one date clause per reminder offset. Inside the text, two single quotes stand for one:
 
 ```
-concat('PermitExpiration eq ''', formatDateTime(addDays(utcNow(), int(trim(item()))), 'yyyy-MM-dd'), '''')
+concat('PermitExpiration eq ''', formatDateTime(addDays(convertFromUtc(utcNow(), 'Eastern Standard Time'), int(trim(item()))), 'yyyy-MM-dd'), '''')
 ```
 
 Text F6-B — Filter Query for permit expiration:
@@ -722,11 +722,11 @@ With today as 2026-11-23, Text F6-B resolves to this:
 - The Link column holds a plain web address, which email programs turn into a link. **Create HTML table** would show an HTML link tag as text.
 - For table borders, wrap the table in `replace(body('Create_HTML_table'), '<table>', '<table border="1" cellpadding="4" style="border-collapse:collapse">')`.
 - Keep at least one number in each reminder setting. An empty setting makes its query fail.
-- Time zone: at 7:00 in any US state, the UTC date and the local date are the same. For an evening schedule, or an office ahead of UTC such as Guam, replace `utcNow()` in expression F6-A with `convertFromUtc(utcNow(), 'Eastern Standard Time')`.
+- Time zone: expression F6-A works out dates in local time, so it matches **Compose Today** at any hour. Replace `'Eastern Standard Time'` with your site's Windows time-zone ID.
 
 *Test in your tenant:* set one test permit's Permit Expiration to exactly 30 days out and run the flow. If the permit is missed, the exact-date filter does not match date-only values in your site's time zone. Use one of these instead:
 
-- A date range in each clause: `(PermitExpiration ge 'D' and PermitExpiration lt 'D+1')`. Build `D+1` with `addDays(utcNow(), add(int(trim(item())), 1))`.
+- A date range in each clause: `(PermitExpiration ge 'D' and PermitExpiration lt 'D+1')`. Build `D+1` with `addDays(convertFromUtc(utcNow(), 'Eastern Standard Time'), add(int(trim(item())), 1))`.
 - No date clause in the query. Filter in the flow by comparing `formatDateTime(item()?['PermitExpiration'], 'yyyy-MM-dd')` with the wanted dates.
 
 ### Optional additions
