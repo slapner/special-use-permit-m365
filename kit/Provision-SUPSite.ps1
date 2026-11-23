@@ -15,10 +15,14 @@
         tenant admin endpoint).
       - Your OWN Entra ID app registration (-ClientId). PnP's shared multi-tenant "PnP Management Shell"
         app was retired in September 2024, so every tenant must register its own app once:
-            Register-PnPEntraIDAppForInteractiveLogin -ApplicationName "SUP Provisioning" -Tenant <tenant>.onmicrosoft.com -Interactive
+            Register-PnPEntraIDAppForInteractiveLogin -ApplicationName "SUP Provisioning" -Tenant <tenant>.onmicrosoft.com
         (Admin consent is required for the delegated SharePoint permissions it requests.)
+        Government clouds: add -AzureEnvironment USGovernment (GCC), USGovernmentHigh (GCC High) or
+        USGovernmentDoD (DoD) to that command AND pass the same value to this script. GCC tenants use
+        .sharepoint.com URLs, so the cloud cannot be inferred from the URL.
 
-    The script is idempotent: every object is checked first and skipped if it already exists.
+    The script is idempotent: every object is checked first and skipped if it already exists. The SUP group
+    grants and the -OwnerEmail site collection admin step are additive and re-applied on every run.
     It does NOT modify columns that already exist (re-run safe, but it will not "fix" a wrong column).
     Supports -WhatIf: read-only checks run, every create/modify step is only reported.
 
@@ -32,7 +36,12 @@
     Application (client) ID of the customer's own Entra ID app (see above).
 
 .PARAMETER OwnerEmail
-    UPN of the primary site owner. Added to "SUP Owners". Also used as Coordinator/Superintendent on sample permits.
+    UPN of the program's site owner. Added as a site collection administrator and to "SUP Owners".
+    Also used as Coordinator/Superintendent on sample permits. The account running the script is the
+    site's primary owner, so it keeps access to finish provisioning.
+
+.PARAMETER AzureEnvironment
+    Production (commercial, default), USGovernment (GCC), USGovernmentHigh (GCC High) or USGovernmentDoD.
 
 .PARAMETER ImportSamplePermits
     Also import Permits-sample.csv (12 fictitious permits) with folders. Test sites only.
@@ -47,6 +56,7 @@ param(
     [string] $SiteAlias = 'SpecialUsePermits',
     [Parameter(Mandatory)] [guid] $ClientId,
     [Parameter(Mandatory)] [string] $OwnerEmail,
+    [ValidateSet('Production', 'USGovernment', 'USGovernmentHigh', 'USGovernmentDoD')] [string] $AzureEnvironment = 'Production',
     [string] $SiteTitle = 'Special Use Permits',
     [string] $ProgramMailbox = 'sup-permits@agency.example',
     [string] $KitPath = $PSScriptRoot,
@@ -102,8 +112,10 @@ function Invoke-Step {
     }
 }
 
-# All existence checks swallow "not found" errors and return $null (some PnP Get-* cmdlets throw instead of returning nothing).
-function Get-OrNull([scriptblock]$Get) { try { & $Get } catch { $null } }
+# All existence checks swallow "not found" errors and return nothing (some PnP Get-* cmdlets throw instead of returning nothing).
+# Nothing, not $null, so a pipeline after it runs zero times. Run with -Verbose to see the swallowed error
+# (a 403 or throttling looks the same as "does not exist" otherwise).
+function Get-OrNull([scriptblock]$Get) { try { & $Get } catch { Write-Verbose "lookup failed: $($_.Exception.Message)" } }
 function Get-ListOrNull([string]$Title) { Get-OrNull { Get-PnPList -Identity $Title -ErrorAction Stop } }
 
 function Get-FieldOrNull([string]$List, [string]$Name) {
@@ -176,11 +188,12 @@ function Find-Item([string]$List, [string]$Field, [string]$Value) {
     Get-OrNull { Get-PnPListItem -List $List -Query $caml -ErrorAction Stop | Select-Object -First 1 }
 }
 
-# Same rule as F1 in flows.md: strip ~ " # % & * : < > ? / \ { | } and spaces, max 30 chars.
+# Same rule as F1b in flows.md: strip ~ " # % & * : < > ? / \ { | } and spaces, collapse repeated dots,
+# max 30 chars, then drop a trailing dot (SharePoint rejects folder names that end in "." or contain "..").
 function Get-ShortName([string]$s) {
-    $clean = $s -replace '[~"#%&*:<>?/\\{|} ]', ''
+    $clean = ($s -replace '[~"#%&*:<>?/\\{|} ]', '') -replace '\.{2,}', '.'
     if ($clean.Length -gt 30) { $clean = $clean.Substring(0, 30) }
-    $clean
+    $clean.TrimEnd('.')
 }
 
 function Split-List([string]$s) { @(($s -split ';') | ForEach-Object { $_.Trim() } | Where-Object { $_ }) }
@@ -199,7 +212,7 @@ function New-InCaml([string]$Field, [string[]]$Values) {
 #    - A Team can still be pointed at this site later via a Teams tab if staff want chat.
 # =============================================================================================
 Write-Step "Connecting to admin center $AdminUrl"
-Connect-PnPOnline -Url $AdminUrl -ClientId $ClientId -Interactive
+Connect-PnPOnline -Url $AdminUrl -ClientId $ClientId -Interactive -AzureEnvironment $AzureEnvironment
 
 Write-Step "Site $SiteUrl"
 $site = Get-OrNull { Get-PnPTenantSite -Identity $SiteUrl -ErrorAction Stop }
@@ -207,18 +220,20 @@ if ($site) {
     Write-Skip 'site exists'
 }
 else {
+    # The running account becomes the owner, so it has rights on the new site; -OwnerEmail is added below.
     Invoke-Step $SiteUrl 'Create communication site' {
-        New-PnPSite -Type CommunicationSite -Title $SiteTitle -Url $SiteUrl -Owner $OwnerEmail -Lcid 1033 -Wait | Out-Null
+        New-PnPSite -Type CommunicationSite -Title $SiteTitle -Url $SiteUrl -Lcid 1033 -Wait | Out-Null
     }
     $site = Get-OrNull { Get-PnPTenantSite -Identity $SiteUrl -ErrorAction Stop }
 }
 if (-not $site) {
-    if ($WhatIfPreference) { Write-Host 'WhatIf: site does not exist yet, remaining steps cannot be previewed.' -ForegroundColor Yellow; return }
+    if ($WhatIfPreference) { Write-Host 'WhatIf: site does not exist yet, so only the site creation line can be previewed. Stopping.' -ForegroundColor Yellow; return }
     throw "Site $SiteUrl not available; cannot continue."
 }
 
 Write-Step "Connecting to $SiteUrl"
-Connect-PnPOnline -Url $SiteUrl -ClientId $ClientId -Interactive
+Connect-PnPOnline -Url $SiteUrl -ClientId $ClientId -Interactive -AzureEnvironment $AzureEnvironment
+Invoke-Step $OwnerEmail 'Add as site collection admin' { Add-PnPSiteCollectionAdmin -Owners $OwnerEmail | Out-Null }
 Write-Host '    NOTE: set Site settings > Regional settings > Time zone to the office time zone (date-only columns and reminder dates depend on it).' -ForegroundColor Yellow
 
 # =============================================================================================
@@ -336,18 +351,27 @@ if (Get-ListOrNull 'Settings') {
 # =============================================================================================
 Write-Step 'Library PermitRecords'
 Ensure-List -Title 'PermitRecords' -Url 'PermitRecords' -Template DocumentLibrary -DisplayTitle 'Permit Records'
-$LibTitle = 'Permit Records'
-if (Get-ListOrNull $LibTitle) {
-    Ensure-Fields -List $LibTitle -Fields @(
+# Identify the library by its URL, not its display name, so a failed rename does not leave it unconfigured.
+$LibId = 'PermitRecords'
+$lib = Get-ListOrNull $LibId
+if ($lib) {
+    if ($lib.Title -ne 'Permit Records') {
+        Invoke-Step $LibId 'Set display name Permit Records' { Set-PnPList -Identity $LibId -Title 'Permit Records' | Out-Null }
+    }
+    Ensure-Fields -List $LibId -Fields @(
         @{ Name = 'PermitNumber'; Type = 'Text'; Display = 'Permit Number'; Indexed = $true }
         @{ Name = 'DocType'; Type = 'Choice'; Choices = $DocTypeValues; Display = 'Doc Type' }
     )
-    Invoke-Step $LibTitle 'Enable versioning (100 major)' { Set-PnPList -Identity $LibTitle -EnableVersioning $true -MajorVersions 100 | Out-Null }
+    # -EnableAutoExpirationVersionTrim $false: -MajorVersions throws on a library whose version trimming is Automatic.
+    Invoke-Step $LibId 'Enable versioning (100 major, no auto-trim)' {
+        Set-PnPList -Identity $LibId -EnableVersioning $true -EnableAutoExpirationVersionTrim $false -MajorVersions 100 -ExpireVersionsAfterDays 0 | Out-Null
+    }
     foreach ($folder in 'Open Projects', 'Closed Projects', '_Templates') {
         if (Get-OrNull { Get-PnPFolder -Url "PermitRecords/$folder" -ErrorAction Stop }) { Write-Skip "folder $folder exists"; continue }
         Invoke-Step "PermitRecords/$folder" 'Create folder' { Add-PnPFolder -Name $folder -Folder 'PermitRecords' | Out-Null }
     }
 }
+elseif (-not $WhatIfPreference) { $script:Failures.Add('PermitRecords library not found: columns, versioning and folders not configured') }
 
 # =============================================================================================
 # 4. Groups and permissions
@@ -355,7 +379,7 @@ if (Get-ListOrNull $LibTitle) {
 #                SUP Compliance / SUP Approving Officials / SUP Viewers = Read.
 #    ComplianceItems + Permit Records: unique perms, SUP Compliance = Contribute.
 #    AuditLog, Settings, ConditionLibrary: unique perms, only owners can edit; everyone else Read (flows' connection account must be in SUP Owners).
-#    NOTE: role names "Full Control/Edit/Contribute/Read" are the English role definition names.
+#    NOTE: role names "Full Control/Contribute/Read" are the English role definition names.
 # =============================================================================================
 Write-Step 'SharePoint groups'
 $Groups = [ordered]@{
@@ -378,12 +402,13 @@ Invoke-Step 'SUP Viewers' 'Set as associated visitors group' { Set-PnPGroup -Ide
 Invoke-Step $OwnerEmail 'Add to SUP Owners' { Add-PnPGroupMember -LoginName $OwnerEmail -Group 'SUP Owners' | Out-Null }
 
 Write-Step 'Unique permissions'
-# Inheritance is broken WITHOUT copying, then every SUP group is granted explicitly. This removes the comm
-# site's default "<Title> Members/Visitors" groups from these lists, so AuditLog really is owners-only edit.
-# Runs only the first time (skipped when the list already has unique permissions), so re-runs never fail on RemoveRole.
+# Inheritance is broken WITHOUT copying (first run only), then every SUP group is granted explicitly. This removes
+# the comm site's default "<Title> Members/Visitors" groups from these lists, so AuditLog really is owners-only edit.
+# Grants are additive and run on every run, so a half-finished first run is repaired. Side effect: a grant an
+# owner removed by hand is re-added.
 $UniquePerms = [ordered]@{
     'ComplianceItems' = [ordered]@{ 'SUP Owners' = 'Full Control'; 'SUP Coordinators' = 'Contribute'; 'SUP Compliance' = 'Contribute'; 'SUP Approving Officials' = 'Read'; 'SUP Viewers' = 'Read' }
-    $LibTitle         = [ordered]@{ 'SUP Owners' = 'Full Control'; 'SUP Coordinators' = 'Contribute'; 'SUP Compliance' = 'Contribute'; 'SUP Approving Officials' = 'Read'; 'SUP Viewers' = 'Read' }
+    'PermitRecords'   = [ordered]@{ 'SUP Owners' = 'Full Control'; 'SUP Coordinators' = 'Contribute'; 'SUP Compliance' = 'Contribute'; 'SUP Approving Officials' = 'Read'; 'SUP Viewers' = 'Read' }
     'AuditLog'        = [ordered]@{ 'SUP Owners' = 'Full Control'; 'SUP Coordinators' = 'Read'; 'SUP Compliance' = 'Read'; 'SUP Approving Officials' = 'Read'; 'SUP Viewers' = 'Read' }
     'Settings'        = [ordered]@{ 'SUP Owners' = 'Full Control'; 'SUP Coordinators' = 'Read'; 'SUP Compliance' = 'Read'; 'SUP Approving Officials' = 'Read'; 'SUP Viewers' = 'Read' }
     'ConditionLibrary'= [ordered]@{ 'SUP Owners' = 'Full Control'; 'SUP Coordinators' = 'Read'; 'SUP Compliance' = 'Read'; 'SUP Approving Officials' = 'Read'; 'SUP Viewers' = 'Read' }
@@ -391,11 +416,13 @@ $UniquePerms = [ordered]@{
 foreach ($l in $UniquePerms.Keys) {
     $list = Get-OrNull { Get-PnPList -Identity $l -Includes HasUniqueRoleAssignments -ErrorAction Stop }
     if (-not $list) { continue }
-    if ($list.HasUniqueRoleAssignments) { Write-Skip "$l already has unique permissions (not changed)"; continue }
     $grants = $UniquePerms[$l]
-    Invoke-Step $l 'Break inheritance (no copy) and grant SUP groups' {
-        Set-PnPList -Identity $l -BreakRoleInheritance | Out-Null
-        foreach ($grp in $grants.Keys) { Set-PnPListPermission -Identity $l -Group $grp -AddRole $grants[$grp] | Out-Null }
+    if (-not $list.HasUniqueRoleAssignments) {
+        Invoke-Step $l 'Break inheritance (no copy)' { Set-PnPList -Identity $l -BreakRoleInheritance | Out-Null }
+    }
+    # Grants are additive, so they run every time and repair a half-finished first run.
+    foreach ($grp in $grants.Keys) {
+        Invoke-Step "$l / $grp" "Grant $($grants[$grp])" { Set-PnPListPermission -Identity $l -Group $grp -AddRole $grants[$grp] | Out-Null }
     }
 }
 Write-Host '    NOTE: SharePoint may add the account running this script directly to these lists; remove it if unwanted.' -ForegroundColor Yellow
@@ -429,6 +456,8 @@ foreach ($row in Import-Csv (Join-Path $KitPath 'PermitTypes-seed.csv') -Encodin
     }
 }
 $TypeIds = @{}
+# Dry run: the types are not created yet, so use placeholders and avoid false "unknown permit type" failures.
+if ($WhatIfPreference) { Import-Csv (Join-Path $KitPath 'PermitTypes-seed.csv') -Encoding utf8 | ForEach-Object { $TypeIds[$_.Title] = 0 } }
 Get-OrNull { Get-PnPListItem -List PermitTypes -PageSize 500 -ErrorAction Stop } | ForEach-Object { $TypeIds[$_['Title']] = $_.Id }
 
 Write-Step 'Import ConditionLibrary'
@@ -450,7 +479,7 @@ foreach ($row in Import-Csv (Join-Path $KitPath 'ConditionLibrary-seed.csv') -En
         SortOrder     = [int]$row.SortOrder
     }
     if ($impacts) { $values.TriggerImpacts = [string[]]$impacts }
-    if ($typeNames) { $values.AppliesToTypes = [int[]]($typeNames | ForEach-Object { $TypeIds[$_] }) }
+    if ($typeNames) { $values.AppliesToTypes = @($typeNames | ForEach-Object { $TypeIds[$_] }) }
     Invoke-Step "ConditionLibrary/$($row.ConditionCode)" 'Add' { Add-PnPListItem -List ConditionLibrary -Values $values | Out-Null }
 }
 
@@ -480,10 +509,10 @@ $Views = [ordered]@{
         Fields = $cols + @('ProposedStart', 'COIReceived')
         Query  = "<OrderBy><FieldRef Name='ProposedStart' Ascending='TRUE'/></OrderBy><Where><And>$(New-InCaml 'Status' $UnexecutedStatuses)<Leq><FieldRef Name='ProposedStart'/><Value Type='DateTime'><Today OffsetDays='30'/></Value></Leq></And></Where>"
     }
-    'Closed this year'                 = @{
-        # CAML has no "start of year" token: Jan 1 of the year the script runs is hard-coded. Edit each January (see list-views.md).
+    'Closed in last 365 days'          = @{
+        # Rolling window, no yearly maintenance. Calendar-year alternative: see list-views.md section 6.
         Fields = $cols + @('ClosedDate', 'FolderUrl')
-        Query  = "<OrderBy><FieldRef Name='ClosedDate' Ascending='FALSE'/></OrderBy><Where><And>$(New-InCaml 'Status' $ClosedStatuses)<Geq><FieldRef Name='ClosedDate'/><Value Type='DateTime'>$year-01-01T00:00:00Z</Value></Geq></And></Where>"
+        Query  = "<OrderBy><FieldRef Name='ClosedDate' Ascending='FALSE'/></OrderBy><Where><And>$(New-InCaml 'Status' $ClosedStatuses)<Geq><FieldRef Name='ClosedDate'/><Value Type='DateTime'><Today OffsetDays='-365'/></Value></Geq></And></Where>"
     }
 }
 if (Get-ListOrNull 'Permits') {
@@ -497,10 +526,12 @@ if (Get-ListOrNull 'Permits') {
     Write-Step 'Column formatting'
     $pill = Get-Content (Join-Path $KitPath 'formatting/status-pill.json') -Raw -Encoding utf8
     $date = Get-Content (Join-Path $KitPath 'formatting/date-overdue.json') -Raw -Encoding utf8
+    $start = Get-Content (Join-Path $KitPath 'formatting/date-start.json') -Raw -Encoding utf8
     Invoke-Step 'Permits.Status' 'Apply status pill formatting' { Set-PnPField -List Permits -Identity Status -Values @{ CustomFormatter = $pill } | Out-Null }
-    foreach ($d in 'PermitExpiration', 'COIExpiration', 'ProposedStart') {
+    foreach ($d in 'PermitExpiration', 'COIExpiration') {
         Invoke-Step "Permits.$d" 'Apply overdue date formatting' { Set-PnPField -List Permits -Identity $d -Values @{ CustomFormatter = $date } | Out-Null }
     }
+    Invoke-Step 'Permits.ProposedStart' 'Apply start-date formatting' { Set-PnPField -List Permits -Identity ProposedStart -Values @{ CustomFormatter = $start } | Out-Null }
 }
 
 # =============================================================================================

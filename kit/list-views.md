@@ -1,6 +1,6 @@
 # Permits list — views and column formatting
 
-> **UNTESTED against a live tenant.** `Provision-SUPSite.ps1` creates every view and applies both formatters automatically. This page is the reference if you need to rebuild them by hand or check what the script did.
+> **UNTESTED against a live tenant.** `Provision-SUPSite.ps1` creates every view and applies all three formatters automatically. This page is the reference if you need to rebuild them by hand or check what the script did.
 
 Status groups used below:
 
@@ -103,25 +103,25 @@ This view also includes permits whose start date has **already passed** without 
 </And></Where>
 ```
 
-## 6. Closed this year
-CAML and the view UI have no "start of this year" token. Pick one of these options:
+## 6. Closed in last 365 days
+CAML and the view UI have no "start of this year" token. Two options:
 
-- **(A) Script default:** the date is hard-coded to 1 January of the year the script ran. **Edit the date every January.**
-- **(B) No maintenance:** rename the view "Closed – last 365 days" and use Closed Date ≥ `[Today]-365`.
+- **(A) Script default, no maintenance:** a rolling window, Closed Date ≥ `[Today]-365`.
+- **(B) Calendar year:** rename the view "Closed this year" and hard-code 1 January (e.g. `2026-01-01`). **Edit the date every January.**
 
 | | |
 |---|---|
-| Filter | Status in **Closed** AND Closed Date ≥ `2026-01-01` (A) *or* ≥ `[Today]-365` (B) |
+| Filter | Status in **Closed** AND Closed Date ≥ `[Today]-365` (A) *or* ≥ `2026-01-01` (B) |
 | Sort | Closed Date descending |
 | Extra columns | Closed Date, Folder |
-| UI recipe | Closed Date *≥* `1/1/2026` (or `[Today]-365`) AND Status ≠ Received … (simpler: Closed Date is not blank, because only closing sets it) |
+| UI recipe | Closed Date *≥* `[Today]-365` (or `1/1/2026`) AND Closed Date is not blank (only closing sets it) |
 
 ```xml
 <OrderBy><FieldRef Name='ClosedDate' Ascending='FALSE'/></OrderBy>
 <Where><And>
   <In><FieldRef Name='Status'/><Values><Value Type='Text'>Closed</Value><Value Type='Text'>Withdrawn</Value><Value Type='Text'>Denied</Value></Values></In>
-  <Geq><FieldRef Name='ClosedDate'/><Value Type='DateTime'>2026-01-01T00:00:00Z</Value></Geq>
-  <!-- option B: <Geq><FieldRef Name='ClosedDate'/><Value Type='DateTime'><Today OffsetDays='-365'/></Value></Geq> -->
+  <Geq><FieldRef Name='ClosedDate'/><Value Type='DateTime'><Today OffsetDays='-365'/></Value></Geq>
+  <!-- option B: <Geq><FieldRef Name='ClosedDate'/><Value Type='DateTime'>2026-01-01T00:00:00Z</Value></Geq> -->
 </And></Where>
 ```
 
@@ -162,9 +162,11 @@ To apply a formatter by hand: open the list, click the column header, then **Col
 ```
 
 ### Dates: red when past, amber within 30 days (`formatting/date-overdue.json`)
-Apply this to Permit Expiration, COI Expiration and Proposed Start.
+Apply this to Permit Expiration and COI Expiration. Proposed Start uses `formatting/date-start.json`: the same rule, but only while the permit is not yet executed.
 
+- **Theme-aware colours:** the formatters use SharePoint's `sp-field-severity--blocked` (red) and `sp-field-severity--warning` (amber) classes instead of fixed hex colours, so they stay readable in dark themes and Teams dark mode.
 - **Blank values:** `Number(@currentField) == 0` shows nothing, so a blank date is never treated as overdue.
+- **Closed permits:** no colour when Status is Closed, Withdrawn or Denied. `[$Status]` reads the Status column, which is in every view the script creates.
 - **When a date turns red:** a date-only value is midnight of that day. A date turns red once a full day has passed (`date + 86400000 ms <= now`), so it shows red from the day *after* the date. That means "< today".
 - **Amber:** the 30-day amber window is `2592000000` ms. Delete the inner `if(...)` if you want red only.
 
@@ -173,11 +175,30 @@ Apply this to Permit Expiration, COI Expiration and Proposed Start.
   "$schema": "https://developer.microsoft.com/json-schemas/sp/v2/column-formatting.schema.json",
   "elmType": "div",
   "txtContent": "=if(Number(@currentField) == 0, '', toLocaleDateString(@currentField))",
+  "attributes": {
+    "class": "=if(Number(@currentField) == 0 || [$Status] == 'Closed' || [$Status] == 'Withdrawn' || [$Status] == 'Denied', '', if(Number(@currentField) + 86400000 <= Number(@now), 'sp-field-severity--blocked', if(Number(@currentField) <= Number(@now) + 2592000000, 'sp-field-severity--warning', '')))"
+  },
   "style": {
-    "color": "=if(Number(@currentField) == 0, '', if(Number(@currentField) + 86400000 <= Number(@now), '#a4262c', if(Number(@currentField) <= Number(@now) + 2592000000, '#8a5a00', '')))",
-    "font-weight": "=if(Number(@currentField) == 0, '', if(Number(@currentField) + 86400000 <= Number(@now), '700', ''))"
+    "font-weight": "=if(Number(@currentField) == 0 || [$Status] == 'Closed' || [$Status] == 'Withdrawn' || [$Status] == 'Denied', '', if(Number(@currentField) + 86400000 <= Number(@now), '700', ''))"
   }
 }
 ```
 
-Verify after applying: put a blank date, yesterday, today, today+10 and today+90 on test items, then check the colors are none, red, amber, amber and none.
+### Proposed Start: overdue only while unexecuted (`formatting/date-start.json`)
+Same rule as above, but no colour once Status is Executed, Active, Closed, Withdrawn or Denied. A past start date only matters before execution.
+
+```json
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/sp/v2/column-formatting.schema.json",
+  "elmType": "div",
+  "txtContent": "=if(Number(@currentField) == 0, '', toLocaleDateString(@currentField))",
+  "attributes": {
+    "class": "=if(Number(@currentField) == 0 || [$Status] == 'Executed' || [$Status] == 'Active' || [$Status] == 'Closed' || [$Status] == 'Withdrawn' || [$Status] == 'Denied', '', if(Number(@currentField) + 86400000 <= Number(@now), 'sp-field-severity--blocked', if(Number(@currentField) <= Number(@now) + 2592000000, 'sp-field-severity--warning', '')))"
+  },
+  "style": {
+    "font-weight": "=if(Number(@currentField) == 0 || [$Status] == 'Executed' || [$Status] == 'Active' || [$Status] == 'Closed' || [$Status] == 'Withdrawn' || [$Status] == 'Denied', '', if(Number(@currentField) + 86400000 <= Number(@now), '700', ''))"
+  }
+}
+```
+
+Verify after applying: on an unexecuted test item, put a blank date, yesterday, today, today+10 and today+90, then check the colours are none, red, amber, amber and none. Set the item to Executed: Proposed Start loses its colour, the expiration columns keep theirs. Set it to Closed: all three lose it.

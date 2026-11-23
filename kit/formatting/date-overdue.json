@@ -2,8 +2,10 @@
   "$schema": "https://developer.microsoft.com/json-schemas/sp/v2/column-formatting.schema.json",
   "elmType": "div",
   "txtContent": "=if(Number(@currentField) == 0, '', toLocaleDateString(@currentField))",
+  "attributes": {
+    "class": "=if(Number(@currentField) == 0 || [$Status] == 'Closed' || [$Status] == 'Withdrawn' || [$Status] == 'Denied', '', if(Number(@currentField) + 86400000 <= Number(@now), 'sp-field-severity--blocked', if(Number(@currentField) <= Number(@now) + 2592000000, 'sp-field-severity--warning', '')))"
+  },
   "style": {
-    "color": "=if(Number(@currentField) == 0, '', if(Number(@currentField) + 86400000 <= Number(@now), '#a4262c', if(Number(@currentField) <= Number(@now) + 2592000000, '#8a5a00', '')))",
-    "font-weight": "=if(Number(@currentField) == 0, '', if(Number(@currentField) + 86400000 <= Number(@now), '700', ''))"
+    "font-weight": "=if(Number(@currentField) == 0 || [$Status] == 'Closed' || [$Status] == 'Withdrawn' || [$Status] == 'Denied', '', if(Number(@currentField) + 86400000 <= Number(@now), '700', ''))"
   }
 }

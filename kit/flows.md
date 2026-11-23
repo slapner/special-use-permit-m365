@@ -6,18 +6,20 @@
 
 - **Rename actions exactly as written.** Expressions refer to actions by name with spaces turned into underscores. The action `Get item Permit` is referenced as `body('Get_item_Permit')`.
 - **Site Address:** `https://<tenant>.sharepoint.com/sites/SpecialUsePermits`, or your test alias such as `/sites/SUP-Test`.
-- **Never hard-code the site path in expressions.** Every flow that builds paths (F1b, F3 and F5) starts with two Compose actions. Better still, create solution environment variables and point these Composes at them, so test and production differ only by environment variable:
+- **Never hard-code the site path in expressions.** Every flow that builds paths (F1b, F3, F4a and F5) starts with two Compose actions. Better still, create solution environment variables and point these Composes at them, so test and production differ only by environment variable:
   - **Compose SiteRel:** `/sites/SpecialUsePermits`
   - **Compose TenantRoot:** `https://<tenant>.sharepoint.com`
 - **List names:** use the display names in the dropdowns: `Permits`, `Settings`, and so on. The library's display name is `Permit Records` and its URL is `PermitRecords`.
-- **Connection account:** use one service account (a licensed, non-personal mailbox user) for all SharePoint, Outlook and Approvals connections. Put it in **SUP Owners**. AuditLog is owners-only for edits, and moving folders needs edit rights on both top folders.
+- **Column names:** these sheets name columns by internal name; the designer shows display names. Most display names are the internal name with spaces (`ProposedStart` → **Proposed Start**). The exceptions: `ApplicantOrg` → **Applicant Organization**, `LocationName` → **Location**, `FolderUrl` → **Folder**, `EvidenceUrl` → **Evidence**, `DefaultTermDays` → **Default Term (days)**. Expressions always use the internal name.
+- **Connection account:** use one service account (a licensed, non-personal mailbox user) for all SharePoint, Outlook and Approvals connections. Put it in **SUP Owners**. AuditLog, Settings and ConditionLibrary are owners-only for edits, and moving folders needs edit rights on both top folders.
+- **Flows started from the app (F2 option B, F3, F4a):** after saving, open the flow's details page → **Run only users** → set SharePoint (and Word Online, Outlook) to **Use this connection (service account)**. Otherwise they run with the coordinator's own rights and cannot write AuditLog or Settings.
 - **Store flows in a solution.** Child flows (F7a) only work in solution-aware flows. Put environment variables `SiteUrl` and `TimeZone` in the solution if you want portability.
 - **Time zone:** where a local date matters, these sheets use `'Eastern Standard Time'`. Replace it with your Windows time-zone ID. Set the same zone in Site settings → Regional settings.
 - **Choice and person columns.** The SharePoint connector returns a single choice as `{ "Value": "..." }`, so you read `?['Status']?['Value']`. A multi-choice comes back as an array of `{ "Value": ... }`. A lookup returns `{ "Id", "Value" }`, and a person returns `{ "Email", "DisplayName", "Claims", ... }`. **Verify these shapes in run history before trusting the expressions.**
 - **Licensing:** every action in these sheets is **Standard** (Microsoft 365 licence) **except** where marked **PREMIUM**.
 
 ### Loop prevention (read this before building)
-F1, F2, F4, F5 and F6 all update Permits items, and F2, F5 and F7b trigger on Permits *modified*. Each modified-trigger flow has a **trigger condition** (Settings → Trigger conditions) so that it fires only on the change it cares about:
+F1, F3, F4, F5 and F6 all update Permits items, and F2, F5 and F7b trigger on Permits *modified*. Each modified-trigger flow has a **trigger condition** (Settings → Trigger conditions) so that it fires only on the change it cares about:
 
 | Flow | Guard |
 |---|---|
@@ -75,7 +77,7 @@ Two flows keep one numbering code path. **F1a** turns a Forms response into a Pe
 3. **Condition:** `length(body('Get_items_Existing')?['value'])` *is equal to* `0`. Put the rest of this flow in the **If yes** branch.
 4. **Select Impacts** turns the form's multi-select answer into the multi-choice array.
    - From: `json(body('Get_response_details')?['<impactsQuestionId>'])`. Forms returns multi-select answers as a JSON array string; **verify** this in run history.
-   - Map (switch to text mode): key `Value`, value `item()`
+   - Map: stay in key/value mode. Key `Value`, value `item()`. This gives `[{"Value": "…"}]`, the shape a multi-choice column needs.
 5. **Create item** (Permits)
    - Set Applicant*, Project*, Location, ProposedStart and ProposedEnd from the form answers.
    - `ReceivedDate`: `formatDateTime(convertFromUtc(utcNow(), 'Eastern Standard Time'), 'yyyy-MM-dd')`
@@ -91,6 +93,8 @@ F1b then fires on the new item.
 **Trigger:** SharePoint, *When an item is created* (list `Permits`).
 
 **Settings → Concurrency control: On, Degree of parallelism = 1.**
+
+**Settings → Trigger conditions:** `@empty(triggerBody()?['PermitNumber'])`. Items that already have a number (imported sample permits, migrated legacy permits) are skipped, so they are not renumbered and get no second folder.
 
 Why: the sequence number is a read-modify-write on the `NextSeq_{year}` row in Settings. SharePoint has no atomic increment. Two runs in parallel would both read `42` and issue `SUP-2026-0042` twice. Running one at a time serializes the allocation.
 
@@ -129,16 +133,20 @@ Why: the sequence number is a read-modify-write on the `NextSeq_{year}` row in S
    ```
    if(empty(triggerBody()?['ApplicantOrg']), triggerBody()?['ApplicantName'], triggerBody()?['ApplicantOrg'])
    ```
-8. **Compose ApplicantShort** strips `~ " # % & * : < > ? / \ { | }` and spaces, then caps the result at 30 characters:
+8. **Compose ApplicantClean** strips `~ " # % & * : < > ? / \ { | }` and spaces, collapses repeated dots (four passes cover runs of up to 16 dots), then caps the result at 30 characters:
    ```
-   take(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(coalesce(outputs('Compose_ApplicantRaw'), 'Applicant'), '~', ''), '"', ''), '#', ''), '%', ''), '&', ''), '*', ''), ':', ''), '<', ''), '>', ''), '?', ''), '/', ''), '\', ''), '{', ''), '|', ''), '}', ''), ' ', ''), 30)
+   take(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(coalesce(outputs('Compose_ApplicantRaw'), 'Applicant'), '~', ''), '"', ''), '#', ''), '%', ''), '&', ''), '*', ''), ':', ''), '<', ''), '>', ''), '?', ''), '/', ''), '\', ''), '{', ''), '|', ''), '}', ''), ' ', ''), '..', '.'), '..', '.'), '..', '.'), '..', '.'), 30)
    ```
-9. **Compose LocationShort:** the same expression with `coalesce(triggerBody()?['LocationName'], 'Location')` as the innermost argument.
+   **Compose ApplicantShort** drops a trailing dot. SharePoint rejects folder names that end in `.` or contain `..`; after collapsing there is at most one trailing dot.
+   ```
+   take(outputs('Compose_ApplicantClean'), sub(length(outputs('Compose_ApplicantClean')), if(endsWith(outputs('Compose_ApplicantClean'), '.'), 1, 0)))
+   ```
+9. **Compose LocationClean** and **Compose LocationShort:** the same two expressions, with `coalesce(triggerBody()?['LocationName'], 'Location')` as the innermost argument and `Compose_LocationClean` in place of `Compose_ApplicantClean`.
 10. **Compose FolderName**
     ```
     concat(outputs('Compose_PermitNumber'), '_', outputs('Compose_ApplicantShort'), '_', outputs('Compose_LocationShort'))
     ```
-    SharePoint also rejects names that start or end with `.` or contain `..`. If applicants can type those, wrap the result in `trim(replace(..., '..', ''))`.
+    The name always starts with the permit number, so it cannot start with `.`. The script's `Get-ShortName` applies the same rule to sample permits.
 11. **Create new folder** (SharePoint)
     - List or Library: `Permit Records`
     - Folder Path: `Open Projects/@{outputs('Compose_FolderName')}`
@@ -171,6 +179,8 @@ Why: the sequence number is a read-modify-write on the `NextSeq_{year}` row in S
 ---
 
 ## F2: Suggest Conditions
+
+A flow has one trigger. Build option A and option B as two flows (for example *SUP – Suggest Conditions (status)* and *SUP – Suggest Conditions (app)*) with the same actions, or build only one.
 
 **Trigger option A:** SharePoint, *When an item or a file is modified* (Permits).
 
@@ -238,7 +248,7 @@ Then add:
           - Included: `true`
           - SortOrder: `items('Apply_to_each_Condition')?['SortOrder']`
         - **Increment variable** `varAdded` by 1
-9. **AUDIT(Field Changed, ...)** with Detail: `concat(variables('varAdded'), ' condition(s) suggested from library')`
+9. **AUDIT(Field Changed, ...)** with Detail: `concat(string(variables('varAdded')), ' condition(s) suggested from library')`
 10. *(Option B only)* **Respond to a PowerApp or flow**, with output `added` = `variables('varAdded')`
 
 ---
@@ -251,60 +261,94 @@ Then add:
 *Populate a Microsoft Word template* is in the Word Online (Business) connector and is **PREMIUM** (it needs Power Automate Premium or a per-flow licence).
 
 **Template preparation.** Each `.docx` in `Permit Records/_Templates` needs:
-- Plain-text content controls tagged `PermitNumber`, `ApplicantName`, `ApplicantOrg`, `ProjectTitle`, `LocationName`, `ProposedStart`, `ProposedEnd`, `PermitExpiration` and `PermitTypeName`.
-- A **Repeating Section** content control tagged `Conditions`, containing plain-text controls `ConditionCode` and `ConditionText`. Use Word's numbered-list style for numbering.
+- Plain-text content controls whose **Title** (Developer → Properties → Title) is `PermitNumber`, `ApplicantName`, `ApplicantOrg`, `ProjectTitle`, `LocationName`, `ProposedStart`, `ProposedEnd`, `PermitExpiration` and `PermitTypeName`. Set Tag to the same value. The connector keys fields on the Title; controls with the same Title are filled with the same value.
+- A **Repeating Section** content control titled `Conditions`, containing plain-text controls titled `ConditionCode` and `ConditionText`. Use Word's numbered-list style for numbering.
+
+**Permit Expiration.** If `PermitExpiration` is blank, F3 sets it to Proposed Start + the permit type's `DefaultTermDays`, writes it to the Permits item and says so in the audit entry. If Proposed Start is also blank (or the type has no default term), F3 stops and tells the coordinator to enter the dates.
 
 **Actions:**
 0. **Compose SiteRel** (see Conventions).
 1. **Get item Permit** (Permits): Id = PermitId
 2. **Get item Type** (PermitTypes): Id = `body('Get_item_Permit')?['PermitType']?['Id']`
-3. **Get items Conditions** (PermitConditions)
+3. **Compose Expiration:** the permit's expiration as `yyyy-MM-dd`, defaulted from the type's term when blank, or `''` when it cannot be worked out.
+   ```
+   if(not(empty(body('Get_item_Permit')?['PermitExpiration'])), formatDateTime(body('Get_item_Permit')?['PermitExpiration'], 'yyyy-MM-dd'), if(or(empty(body('Get_item_Permit')?['ProposedStart']), empty(body('Get_item_Type')?['DefaultTermDays'])), '', addDays(body('Get_item_Permit')?['ProposedStart'], int(body('Get_item_Type')?['DefaultTermDays']), 'yyyy-MM-dd')))
+   ```
+4. **Condition Expiration missing:** `empty(outputs('Compose_Expiration'))` *is equal to* `true`
+   - **If yes:**
+     1. **Respond to a PowerApp or flow**, with outputs `fileUrl` = `''` and `message` = `Draft not generated: enter Proposed Start (or Permit Expiration) on the permit, then try again.`
+     2. **Terminate**, Status **Cancelled**.
+5. **Get items Conditions** (PermitConditions)
    - Filter Query: `PermitId eq @{body('Get_item_Permit')?['ID']} and Included eq 1`
    - Order By: `SortOrder asc`
    - Top Count: `500`
-4. **Select WordConditions**
+6. **Select WordConditions**
    - From: `body('Get_items_Conditions')?['value']`
    - Map:
      - `ConditionCode`: `item()?['Title']`
      - `ConditionText`: `item()?['ConditionText']`
-5. **Compose FolderSiteRel** (path relative to the site, as SharePoint actions expect)
+7. **Compose FolderSiteRel** (path relative to the site, as SharePoint actions expect)
    ```
    replace(body('Get_item_Permit')?['FolderPath'], outputs('Compose_SiteRel'), '')
    ```
-6. **Get files Drafts.** Use *Get files (properties only)* on Permit Records.
-   - Filter Query: `startswith(FileLeafRef, '@{body('Get_item_Permit')?['PermitNumber']}_DraftPermit_v')`
+8. **Get files Drafts.** Use *Get files (properties only)* on Permit Records.
+   - Filter Query (Word drafts only; excludes signed PDFs and other uploads):
+     ```
+     startswith(FileLeafRef, '@{body('Get_item_Permit')?['PermitNumber']}_DraftPermit_v') and substringof('.docx', FileLeafRef)
+     ```
    - Limit Entries to Folder: `outputs('Compose_FolderSiteRel')`. **Verify** that this parameter accepts a library-relative path.
-7. **Compose Version:** `add(length(body('Get_files_Drafts')?['value']), 1)`
-8. **Populate a Microsoft Word template** — **PREMIUM**
-   - Location: the site
-   - Document Library: `Permit Records`
-   - File: pick the template.
-   - **Limitation, verify:** when *File* is a dynamic path (for example `body('Get_item_Type')?['TemplateFile']`), the designer cannot read the template at design time. It then shows no named fields to map.
-   - **Recommended:**
-     - Use **one master template**, with `PermitTypeName` as a field and type-specific text kept in the condition library.
-     - Or use a **Switch** on `body('Get_item_Permit')?['PermitType']?['Value']` with one Populate action per template, each with a static file. That is six branches.
-   - Map the plain fields from `Get_item_Permit`. For dates, use `formatDateTime(body('Get_item_Permit')?['PermitExpiration'], 'MMMM d, yyyy')`.
-   - Conditions (repeating section): switch to array input and enter `body('Select_WordConditions')`.
-9. **Create file** (SharePoint)
-   - Folder Path: `outputs('Compose_FolderSiteRel')`
-   - File Name: `concat(body('Get_item_Permit')?['PermitNumber'], '_DraftPermit_v', outputs('Compose_Version'), '.docx')`
-   - File Content: `body('Populate_a_Microsoft_Word_template')`
-10. **Update file properties** (Permit Records)
+9. **Select DraftNumbers** pulls `n` out of each `{PermitNumber}_DraftPermit_v{n}.docx` name.
+   - From: `body('Get_files_Drafts')?['value']`
+   - Map (text mode):
+     ```
+     int(first(split(first(split(last(split(item()?['{FilenameWithExtension}'], '_DraftPermit_v')), '.')), '_')))
+     ```
+   - A hand-renamed draft whose `v` is not followed by a number makes `int()` fail. Tell staff not to rename drafts.
+10. **Compose Version:** the highest existing number + 1, or 1 when there are no drafts. Deleting a draft can no longer cause a name clash.
+    ```
+    add(max(union(body('Select_DraftNumbers'), createArray(0))), 1)
+    ```
+11. **Populate a Microsoft Word template** — **PREMIUM**
+    - Location: the site
+    - Document Library: `Permit Records`
+    - File: pick the template.
+    - **Limitation, verify:** when *File* is a dynamic path (for example `body('Get_item_Type')?['TemplateFile']`), the designer cannot read the template at design time. It then shows no named fields to map.
+    - **Recommended:**
+      - Use **one master template**, with `PermitTypeName` as a field and type-specific text kept in the condition library.
+      - Or use a **Switch** on `body('Get_item_Permit')?['PermitType']?['Value']` with one Populate action per template, each with a static file. That is six branches.
+    - Map the plain fields from `Get_item_Permit`. `formatDateTime()` fails on a blank date, so map each date null-safe:
+      - ProposedStart: `if(empty(body('Get_item_Permit')?['ProposedStart']), '', formatDateTime(body('Get_item_Permit')?['ProposedStart'], 'MMMM d, yyyy'))`
+      - ProposedEnd: the same with `ProposedEnd`.
+      - PermitExpiration: `formatDateTime(outputs('Compose_Expiration'), 'MMMM d, yyyy')` (never blank after step 4).
+    - Conditions (repeating section): switch to array input and enter `body('Select_WordConditions')`.
+12. **Create file** (SharePoint)
+    - Folder Path: `outputs('Compose_FolderSiteRel')`
+    - File Name: `concat(body('Get_item_Permit')?['PermitNumber'], '_DraftPermit_v', string(outputs('Compose_Version')), '.docx')`
+    - File Content: `body('Populate_a_Microsoft_Word_template')`
+13. **Update file properties** (Permit Records)
     - Id: `body('Create_file')?['ItemId']`
     - PermitNumber: the permit number
     - DocType Value: `Draft Permit`
-11. **Update item Permit** (Permits): Id = PermitId, Status Value = `Draft Permit`. F7b logs the status change.
-12. **AUDIT(Document Added, ...)** with Detail: `concat('Draft permit generated: ', body('Create_file')?['Name'])`
-13. **Respond to a PowerApp or flow**, with output `fileUrl` = `body('Create_file')?['{Link}']` (**verify** this output name).
+14. **Update item Permit** (Permits)
+    - Id: PermitId
+    - Status Value: `Draft Permit`. F7b logs the status change.
+    - PermitExpiration: `if(empty(body('Get_item_Permit')?['PermitExpiration']), outputs('Compose_Expiration'), body('Get_item_Permit')?['PermitExpiration'])`
+15. **AUDIT(Document Added, ...)** with Detail:
+    ```
+    concat('Draft permit generated: ', body('Create_file')?['Name'], if(empty(body('Get_item_Permit')?['PermitExpiration']), concat('. Permit Expiration was blank; set to ', outputs('Compose_Expiration'), ' (Proposed Start + ', string(body('Get_item_Type')?['DefaultTermDays']), ' days).'), ''))
+    ```
+16. **Respond to a PowerApp or flow**, with outputs `fileUrl` = `body('Update_file_properties')?['{Link}']` and `message` = `Draft generated.` (*Create file* has no `{Link}` output; **verify** the name on *Update file properties*.) Every Respond action in a flow must return the same outputs, which is why step 4 also returns both.
+
+The date expressions rely on `if()` evaluating only the branch it picks. **Verify** with a test permit that has no Proposed End.
 
 ### Standard-licence fallback (no Premium)
 There is no Standard action that fills a Word template, so the fallback combines document properties with copy and paste:
 
 1. Put the template on the Permit Records library as the content-type template (Library settings → Advanced → Document template), or keep it in `_Templates`.
 2. In the template, use **Insert → Quick Parts → Document Property → Permit Number** (and Doc Type). These bind only to columns *of the library the document lives in*. To show applicant, location or dates this way, you must add matching library columns, which the spec does not define, and have the flow fill them with *Update file properties*.
-3. **Flow:**
+3. **Flow** (start with steps 0–4 above and set PermitExpiration as in step 14, so the expiration is defaulted the same way):
    1. **Copy file** copies `_Templates/<template>` to the permit folder.
-   2. Rename the file to `{PermitNumber}_DraftPermit_v{n}.docx`. Use *Move file* with a new name, or *Send an HTTP request to SharePoint* `MoveTo`; **verify**.
+   2. Rename the file to `{PermitNumber}_DraftPermit_v{n}.docx`, with `n` from steps 8–10 above. Use *Move file* with a new name, or *Send an HTTP request to SharePoint* `MoveTo`; **verify**.
    3. **Update file properties** sets PermitNumber and DocType to Draft Permit. The Quick Parts then show the values when the document opens in Word.
 4. **Conditions** cannot be generated into the document on Standard. Instead:
    1. The flow builds a numbered plain-text block: `join(body('Select_ConditionLines'), decodeUriComponent('%0D%0A%0D%0A'))`, where `Select_ConditionLines` maps `concat(item()?['Title'], '  ', item()?['ConditionText'])`.
@@ -318,25 +362,35 @@ This gives a correct, auditable draft, but it involves one manual paste per perm
 ## F4: Signature routing
 
 ### F4 primary: e-signature provider
-Write the flow against your chosen provider. Choose between:
+Choose the provider by tenant cloud first.
 
-- **SharePoint eSignature** (Microsoft Syntex pay-as-you-go).
-  - At the time of writing, requests are started from the document in SharePoint (… → *Request signatures*).
-  - **Verify** whether your tenant has a Power Automate action or trigger for it. If not, the coordinator starts the request manually, and F4 starts at step 4 (signed file arrives in the library).
-  - **Verify** that it supports sequential signer order and external signers.
-- **Adobe Acrobat Sign** connector.
-  - Needs an Acrobat Sign licence. Check the connector tier (Standard or Premium) on its Learn connector page.
-  - **Verify action names.** The author believes they include *Upload a document and get a document ID* and *Create an agreement from an uploaded document and send for signature*, plus trigger *When an agreement workflow is completed successfully*.
+- **SharePoint eSignature** (pay-as-you-go, **$2 per request**, billed to an Azure subscription; up to 10 recipients per request).
+  - **No Power Automate action or trigger.** The coordinator starts each request by hand from the PDF in the permit folder (… → *Request signatures*). Skip F4a; signed copies are saved back to the original folder, so build only the file-arrival half: a *When a file is created (properties only)* trigger on Permit Records that updates the permit and writes AUDIT, as in the Standard fallback below. **Verify** the signed copy's file name in a test request and match the trigger condition to it.
+  - Sequential signing: turn on *Recipients must sign in order*. External signers must be Entra B2B guests.
+  - **PDF only.** Making the PDF in a flow needs *Convert Word Document to PDF* (Premium); without Premium the coordinator uses Word's *Save as PDF*.
+  - No government-cloud statement from Microsoft. Treat it as commercial-cloud only and confirm with Microsoft before using it in GCC, GCC High or DoD.
+- **Adobe Acrobat Sign** connector: **Standard**. Commercial and **GCC only** (not GCC High or DoD). Needs an Acrobat Sign licence. Signing order is the participant set's *Order* (1, 2, …).
+  - **Verify action names in your tenant.** The author believes they include *Upload a document and get a document ID* and *Create an agreement from an uploaded document and send for signature*, plus trigger *When an agreement workflow is completed successfully*.
+- **DocuSign** connector: **Standard**. Commercial, **GCC, GCC High and DoD**; the only listed option for GCC High and DoD. Needs a DocuSign licence.
+  - Pattern: create an envelope, run *Add recipient to an envelope (V2)* once per signer with *Signing order (routingOrder)* `1` (permittee) and `2` (superintendent), then send. *Update recipient on an envelope* also takes routingOrder.
+  - The create-envelope, send, status and trigger actions: **verify action names in your tenant**.
 
-**F4a Send:** trigger is Power Apps (V2) with `PermitId`.
+**F4a Send** (Adobe Acrobat Sign or DocuSign): trigger is Power Apps (V2) with `PermitId`.
 1. **Get item Permit**
-2. **Get file content** of the latest `_DraftPermit_v{n}`. Use *Get files (properties only)* in the permit folder, ordered `Modified desc`, Top 1, then *Get file content*.
-3. **Convert to PDF** if your provider needs it. Word Online (Business) has *Convert Word Document to PDF*; **verify** its tier and name.
+2. **Get files Draft** (*Get files (properties only)*, Permit Records), then **Get file content** of the first result.
+   - Filter Query:
+     ```
+     startswith(FileLeafRef, '@{body('Get_item_Permit')?['PermitNumber']}_DraftPermit_v') and substringof('.docx', FileLeafRef)
+     ```
+   - Order By: `Modified desc`
+   - Top Count: `1`
+   - Limit Entries to Folder: the permit folder. Add **Compose SiteRel** and **Compose FolderSiteRel** before this step, as in F3 steps 0 and 7.
+3. **Convert Word Document to PDF** (Word Online (Business)) — **PREMIUM**. Only if your provider needs a PDF; skip it if the provider accepts `.docx`.
 4. **Send for signature** (provider action; **verify action name**)
    - Signer order 1: `body('Get_item_Permit')?['ApplicantEmail']`
    - Signer order 2: `body('Get_item_Permit')?['Superintendent']?['Email']`
    - Document name: `concat(<PermitNumber>, '_Executed.pdf')`
-   - Signing order: **sequential**
+   - Signing order: **sequential** (Adobe: participant *Order*; DocuSign: `routingOrder`)
 5. **Update item Permit**
    - SignatureRequestId: the provider's agreement or envelope id output
    - Status Value: `Out for Permittee Signature`
@@ -407,15 +461,19 @@ Trigger condition:
 
 **Trigger:** SharePoint, *When an item or a file is modified* (Permits).
 
+**Settings → Concurrency control: On, Degree of parallelism = 1**, so two quick edits cannot both try the move.
+
 Trigger condition (enter on one line):
 ```
-@and(contains(createArray('Closed','Withdrawn','Denied'), triggerBody()?['Status']?['Value']), not(empty(triggerBody()?['FolderPath'])), not(contains(triggerBody()?['FolderPath'], '/Closed Projects/')))
+@and(contains(createArray('Closed','Withdrawn','Denied'), triggerBody()?['Status']?['Value']), not(empty(triggerBody()?['FolderPath'])), not(contains(coalesce(triggerBody()?['FolderPath'], ''), '/Closed Projects/')))
 ```
 The flow's own update moves the folder path into `/Closed Projects/`, so the flow cannot retrigger itself.
 
 **Actions:**
 0. **Compose SiteRel** and **Compose TenantRoot** (see Conventions).
 1. **Compose FolderSiteRel:** `replace(triggerBody()?['FolderPath'], outputs('Compose_SiteRel'), '')`. This gives `/PermitRecords/Open Projects/SUP-…`.
+   1. **Get item Fresh** (Permits): Id `triggerBody()?['ID']`
+   2. **Condition Already moved:** `contains(coalesce(body('Get_item_Fresh')?['FolderPath'], ''), '/Closed Projects/')` *is equal to* `true`. If yes: **Terminate**, Status **Succeeded**. A queued run whose item an earlier run already closed stops here.
 2. **Move folder** (SharePoint, Standard)
    - Current Site Address: the site
    - Folder to Move: `outputs('Compose_FolderSiteRel')`
@@ -423,7 +481,10 @@ The flow's own update moves the folder path into `/Closed Projects/`, so the flo
    - Destination Folder: `/PermitRecords/Closed Projects`
    - If another folder is already there: *Fail this action*
    - **Verify** the option labels, and whether the folder pickers want a library-relative or site-relative path.
-3. **Compose NewFolderPath**
+   1. **Get folder metadata using path Source:** path `outputs('Compose_FolderSiteRel')`. *Configure run after*: Move folder **has failed**.
+   2. **Send an email (V2) Move failed** to the coordinator and the program mailbox: the permit number, the folder path and the Move folder error. *Configure run after*: Get folder metadata using path Source **is successful**. The source folder is still there, so the move really failed or stopped part-way and a person must look.
+   3. **Terminate**, Status **Failed**. Runs after the email.
+3. **Compose NewFolderPath.** *Configure run after*: the step 2.3 **Terminate is skipped** (it is skipped whenever the email is). That covers both good paths: the move worked, or it failed only because an earlier run had already moved the folder (step 2.1 then fails with not-found).
    ```
    replace(triggerBody()?['FolderPath'], '/PermitRecords/Open Projects/', '/PermitRecords/Closed Projects/')
    ```
@@ -439,8 +500,8 @@ The flow's own update moves the folder path into `/Closed Projects/`, so the flo
 5. **AUDIT(Moved to Closed, ...)** with Detail: `concat('Status ', triggerBody()?['Status']?['Value'], '. Folder moved to ', outputs('Compose_NewFolderPath'))`
 
 **Notes:**
-- Sharing links and the item IDs of the files survive the move. Bookmarked folder URLs do not.
-- **Configure run after** on step 2: if the move fails (for example a name clash), email the coordinator and the program mailbox.
+- If step 4 fails after a good move, the next edit re-runs F5: steps 2–2.1 find the folder already gone and step 4 heals the item.
+- Do not assume file item IDs or version history survive the move (unverified). Test it: note a file's ID and version count, close the permit, compare. Bookmarked folder URLs break.
 
 ---
 
@@ -476,17 +537,17 @@ The flow's own update moves the folder path into `/Closed Projects/`, so the flo
    - Better near midnight UTC: use `addDays(convertFromUtc(utcNow(), 'Eastern Standard Time'), int(trim(item())))`. At 07:00 Eastern the UTC date and the local date are the same, so either works.
 5. **Select COIDates:** as above, from `Filter_array_COI`, with `COIExpiration`.
 6. **Select StartDates:** as above, from `Filter_array_Start`, with `ProposedStart`.
-7. **Get items Exp** (Permits), Top Count 500. Filter Query:
+7. **Get items Exp** (Permits), Top Count `500`. Filter Query:
    ```
    (@{join(body('Select_ExpDates'), ' or ')}) and (Status eq 'Executed' or Status eq 'Active')
    ```
    With today = 2026-11-23, this resolves to:
    `(PermitExpiration eq '2027-01-22' or PermitExpiration eq '2026-12-23' or PermitExpiration eq '2026-11-30') and (Status eq 'Executed' or Status eq 'Active')`
-8. **Get items COI** (Permits). Filter Query:
+8. **Get items COI** (Permits), Top Count `500`. Filter Query:
    ```
    (@{join(body('Select_COIDates'), ' or ')}) and Status ne 'Closed' and Status ne 'Withdrawn' and Status ne 'Denied'
    ```
-9. **Get items Start** (Permits). Filter Query:
+9. **Get items Start** (Permits), Top Count `500`. Filter Query:
    ```
    (@{join(body('Select_StartDates'), ' or ')}) and (Status eq 'Received' or Status eq 'Under Review' or Status eq 'Draft Permit' or Status eq 'Out for Permittee Signature' or Status eq 'Out for Superintendent Signature')
    ```
@@ -527,7 +588,7 @@ The flow's own update moves the folder path into `/Closed Projects/`, so the flo
     4. **Send an email (V2)**
        - To: `items('Apply_to_each_Recipient')`
        - CC: `outputs('Compose_Mailbox')`
-       - Subject: `concat('SUP reminders for ', outputs('Compose_Today'), ' (', length(body('Filter_array_Mine')), ')')`
+       - Subject: `concat('SUP reminders for ', outputs('Compose_Today'), ' (', string(length(body('Filter_array_Mine'))), ')')`
        - Body: `<p>Permits needing attention:</p>@{body('Create_HTML_table')}`
        - Optional: wrap `Create_HTML_table` in `replace(..., '<table>', '<table border="1" cellpadding="4" style="border-collapse:collapse">')` for borders.
 16. **Apply to each Sent** over `body('Filter_array_Due')`, with **Concurrency 1**. A permit can appear twice (EXP and COI on the same day), so the updates must not race.
@@ -541,7 +602,7 @@ The flow's own update moves the folder path into `/Closed Projects/`, so the flo
        - Id: `items('Apply_to_each_Sent')?['Id']`
        - LastReminderKey: `outputs('Compose_NewKey')`
        - Status Value: `body('Get_item_Fresh')?['Status']?['Value']`
-    4. **AUDIT(Reminder Sent, ...)** with Detail `concat(items('Apply_to_each_Sent')?['Reminder'], ' in ', items('Apply_to_each_Sent')?['DaysOut'], ' days, to ', items('Apply_to_each_Sent')?['To'])` and Actor `system`
+    4. **AUDIT(Reminder Sent, ...)** with Detail `concat(items('Apply_to_each_Sent')?['Reminder'], ' in ', string(items('Apply_to_each_Sent')?['DaysOut']), ' days, to ', items('Apply_to_each_Sent')?['To'])` and Actor `system`
 
 Updating `LastReminderKey` fires the Permits *modified* triggers. F7b ignores it because Status is unchanged, and F5 ignores it because of its trigger condition.
 
@@ -567,13 +628,19 @@ See the top of this page.
    - Method: `GET`
    - Uri:
      ```
-     _api/web/lists/getbytitle('Permits')/items(@{triggerBody()?['ID']})/versions?$select=VersionLabel,Status&$top=2
+     _api/web/lists/getbytitle('Permits')/items(@{triggerBody()?['ID']})/versions?$select=VersionLabel,Status&$top=20
      ```
    - Headers: `Accept: application/json;odata=nometadata`
    - **Verify:** the versions collection should be newest first. If `$top` is rejected, drop it.
-4. **Compose PreviousStatus**
+4. **Filter array OlderStatus** finds the newest version whose Status differs from the current one. The version just before this one is not enough: another edit in the same polling window, or F5's folder update, can add versions that carry the new status.
+   - From: `body('Send_an_HTTP_request_to_SharePoint')?['value']`
+   - Condition (advanced):
+     ```
+     @not(equals(item()?['Status'], triggerBody()?['Status']?['Value']))
+     ```
+   **Compose PreviousStatus**
    ```
-   coalesce(body('Send_an_HTTP_request_to_SharePoint')?['value']?[1]?['Status'], '(none)')
+   coalesce(first(body('Filter_array_OlderStatus'))?['Status'], '(none)')
    ```
 5. **AUDIT(Status Changed, ...)**
    - Detail: `concat(outputs('Compose_PreviousStatus'), ' → ', triggerBody()?['Status']?['Value'])`
@@ -591,7 +658,7 @@ If staff save two edits within one trigger polling window, they arrive as one ru
 | F1b | SharePoint: item created (concurrency 1) | SharePoint, Outlook | No |
 | F2 | SharePoint: item modified, with Get changes; or Power Apps (V2) | SharePoint | No |
 | F3 | Power Apps (V2) | SharePoint, **Word Online (Business): Populate a Microsoft Word template** | **Yes** (Standard fallback described) |
-| F4 primary | Power Apps (V2) plus provider trigger | SharePoint, e-sign provider | Depends on provider (**verify**) |
+| F4 primary | Power Apps (V2) plus provider trigger; SharePoint eSignature: started by hand, file-created trigger only | SharePoint, Adobe Acrobat Sign or DocuSign | No for Adobe Sign / DocuSign; **Yes** if the flow converts to PDF |
 | F4 fallback | SharePoint: file created | SharePoint, Approvals, Outlook | No |
 | F5 | SharePoint: item modified, with trigger condition | SharePoint | No |
 | F6 | Recurrence 07:00 | SharePoint, Outlook | No |
