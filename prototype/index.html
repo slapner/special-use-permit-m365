@@ -1,0 +1,1083 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Generated from sup-coordinator.html by scripts/build-prototype.py. Do not edit. -->
+<style>html{color-scheme:light}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>SUP Coordinator</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f3f4f1; --surface:#ffffff; --surface-2:#eceee9; --surface-3:#e3e6e0;
+  --border:#d3d8d0; --border-strong:#b6bdb3;
+  --text:#1b2420; --text-2:#45514b; --muted:#65706a;
+  --accent:#2c5a47; --accent-hover:#234a3a; --accent-soft:#dde9e2; --on-accent:#ffffff;
+  --good:#2b7a4b; --good-soft:#dff0e5;
+  --warn:#8f5a00; --warn-soft:#fbeed2;
+  --crit:#b0281f; --crit-soft:#f8e0dd;
+  --info:#2b5a85; --info-soft:#dfe9f3;
+  --neutral-soft:#e6e8e4;
+  --banner:#2f3a35; --on-banner:#eef2ef;
+  --focus:#2463d6;
+  --chart-1:#2c5a47; --chart-2:#7a9a8a; --grid:#dde1da;
+  --scrim:rgba(20,28,24,.45); --shadow:0 1px 2px rgba(20,30,25,.06),0 4px 14px rgba(20,30,25,.06);
+  --doc-paper:#ffffff; --doc-ink:#1b1f1d;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#111613; --surface:#181e1b; --surface-2:#1f2622; --surface-3:#28302b;
+    --border:#313a35; --border-strong:#46514a;
+    --text:#e2e8e4; --text-2:#b6c0ba; --muted:#8e9993;
+    --accent:#76b896; --accent-hover:#8fcaa9; --accent-soft:#1f3529; --on-accent:#0e1611;
+    --good:#6cc48f; --good-soft:#1b3324;
+    --warn:#e3a94a; --warn-soft:#3a2c12;
+    --crit:#f08a80; --crit-soft:#3f1d1a;
+    --info:#86b5e0; --info-soft:#1a2b3c;
+    --neutral-soft:#262d29;
+    --banner:#26302b; --on-banner:#dfe6e1;
+    --focus:#7aa7ff;
+    --chart-1:#76b896; --chart-2:#4f6e5f; --grid:#2b332e;
+    --scrim:rgba(0,0,0,.6); --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25);
+    --doc-paper:#f7f7f4; --doc-ink:#1b1f1d;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+    --bg:#111613; --surface:#181e1b; --surface-2:#1f2622; --surface-3:#28302b;
+    --border:#313a35; --border-strong:#46514a;
+    --text:#e2e8e4; --text-2:#b6c0ba; --muted:#8e9993;
+    --accent:#76b896; --accent-hover:#8fcaa9; --accent-soft:#1f3529; --on-accent:#0e1611;
+    --good:#6cc48f; --good-soft:#1b3324;
+    --warn:#e3a94a; --warn-soft:#3a2c12;
+    --crit:#f08a80; --crit-soft:#3f1d1a;
+    --info:#86b5e0; --info-soft:#1a2b3c;
+    --neutral-soft:#262d29;
+    --banner:#26302b; --on-banner:#dfe6e1;
+    --focus:#7aa7ff;
+    --chart-1:#76b896; --chart-2:#4f6e5f; --grid:#2b332e;
+    --scrim:rgba(0,0,0,.6); --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25);
+    --doc-paper:#f7f7f4; --doc-ink:#1b1f1d;
+    color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 "IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow-x:hidden}
+.mono,code{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.92em}
+.num{font-variant-numeric:tabular-nums}
+a{color:var(--accent)}
+h1,h2,h3,h4{margin:0;line-height:1.25;font-weight:600}
+h1{font-size:1.35rem} h2{font-size:1.05rem} h3{font-size:.95rem}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:4px}
+.wrap{max-width:1200px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.banner{background:var(--banner);color:var(--on-banner);font-size:.8rem;padding:6px 0}
+.banner .wrap{display:flex;gap:8px;align-items:center}
+.banner b{font-weight:600;letter-spacing:.02em}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--border)}
+.topbar{display:flex;align-items:center;gap:16px;min-height:56px;flex-wrap:wrap;padding-top:6px;padding-bottom:6px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:600;white-space:nowrap}
+.brand svg{flex:none}
+.brand small{display:block;font-weight:400;color:var(--muted);font-size:.75rem;line-height:1.1}
+@media (max-width:720px){nav.main{order:3;flex-basis:100%} .role{margin-left:auto} .role label{display:none} .brand small{display:none} .role select{max-width:150px} .topbar{gap:8px 12px}}
+nav.main{display:flex;gap:2px;overflow-x:auto;flex:1 1 auto;min-width:0;scrollbar-width:none}
+nav.main a{padding:8px 12px;border-radius:6px;text-decoration:none;color:var(--text-2);white-space:nowrap;font-weight:500;font-size:.92rem}
+nav.main a:hover{background:var(--surface-2);color:var(--text)}
+nav.main a[aria-current="page"]{background:var(--accent-soft);color:var(--accent)}
+.role{display:flex;align-items:center;gap:8px;font-size:.85rem;color:var(--muted)}
+.role select{min-width:0;max-width:200px}
+main{padding-top:20px;padding-bottom:64px}
+.page-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.page-head p{margin:4px 0 0;color:var(--muted);font-size:.9rem}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow)}
+.card-pad{padding:16px}
+.card-head{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.card-head p{margin:0;color:var(--muted);font-size:.82rem}
+.grid{display:grid;gap:16px}
+.dash-grid{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr)}
+.grid>*,.two>*{min-width:0}
+@media (max-width:900px){.dash-grid{grid-template-columns:minmax(0,1fr)}}
+.kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:16px}
+@media (max-width:900px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:560px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{display:block;text-align:left;background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--border-strong);border-radius:8px;padding:12px 14px;cursor:pointer;box-shadow:var(--shadow);width:100%}
+.kpi:hover{border-color:var(--border-strong)}
+.kpi .v{font-size:1.7rem;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.1}
+.kpi .l{font-size:.8rem;color:var(--text-2);margin-top:2px}
+.kpi.warn{border-left-color:var(--warn)} .kpi.crit{border-left-color:var(--crit)} .kpi.info{border-left-color:var(--info)} .kpi.good{border-left-color:var(--accent)}
+.pill{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:999px;font-size:.76rem;font-weight:500;white-space:nowrap;background:var(--neutral-soft);color:var(--text-2);line-height:1.5}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.85}
+.pill.plain::before{display:none}
+.pill.info{background:var(--info-soft);color:var(--info)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.crit{background:var(--crit-soft);color:var(--crit)}
+.pill.good{background:var(--good-soft);color:var(--good)}
+.pill.accent{background:var(--accent-soft);color:var(--accent)}
+.tag{display:inline-block;padding:1px 8px;border:1px solid var(--border);border-radius:4px;font-size:.76rem;color:var(--text-2);background:var(--surface-2);margin:2px 4px 2px 0;white-space:nowrap}
+.queue{list-style:none;margin:0;padding:0}
+.queue li{border-top:1px solid var(--border)}
+.queue li:first-child{border-top:0}
+.queue a{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 14px;padding:12px 16px;text-decoration:none;color:inherit}
+.queue a:hover{background:var(--surface-2)}
+.queue .when{grid-row:span 2;font-variant-numeric:tabular-nums;font-weight:600;width:56px;text-align:center;padding:6px 0;border-radius:6px;background:var(--surface-2);font-size:.85rem;line-height:1.2}
+.queue .when small{display:block;font-weight:400;color:var(--muted);font-size:.7rem}
+.queue .when.crit{background:var(--crit-soft);color:var(--crit)} .queue .when.warn{background:var(--warn-soft);color:var(--warn)} .queue .when.info{background:var(--info-soft);color:var(--info)}
+.queue .t{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;min-width:0}
+.queue .t .sub{color:var(--muted);font-size:.85rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.queue .reasons{display:flex;gap:6px;flex-wrap:wrap;min-width:0}
+.reasons .pill,.chips .pill{white-space:normal}
+.pipeline{padding:16px}
+.stagebar{display:flex;height:14px;border-radius:7px;overflow:hidden;background:var(--surface-2);gap:2px}
+.stagebar span{display:block;min-width:4px}
+.stages{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:4px 16px;margin:14px 0 0;padding:0;list-style:none}
+.stages a{display:flex;align-items:center;gap:8px;text-decoration:none;color:var(--text-2);font-size:.85rem;padding:4px 0}
+.stages a:hover{color:var(--text)}
+.stages .sw{width:10px;height:10px;border-radius:2px;flex:none}
+.stages .c{margin-left:auto;font-variant-numeric:tabular-nums;font-weight:600;color:var(--text)}
+.ms{list-style:none;margin:0;padding:0}
+.ms li{display:grid;grid-template-columns:70px minmax(0,1fr);gap:10px;padding:10px 16px;border-top:1px solid var(--border);font-size:.88rem}
+.ms li:first-child{border-top:0}
+.ms .d{font-variant-numeric:tabular-nums;color:var(--text-2)}
+.ms .d b{display:block;color:var(--text);font-weight:600}
+.ms a{color:inherit;text-decoration:none} .ms a:hover .mono{text-decoration:underline}
+.empty{padding:20px 16px;color:var(--muted);font-size:.9rem}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:top}
+th{font-weight:600;color:var(--text-2);font-size:.78rem;text-transform:uppercase;letter-spacing:.04em;background:var(--surface-2);white-space:nowrap}
+tbody tr.rowlink{cursor:pointer}
+tbody tr.rowlink:hover{background:var(--surface-2)}
+td.nowrap,th.nowrap{white-space:nowrap}
+td .sub{color:var(--muted);font-size:.82rem}
+td .tag{white-space:normal}
+.libtable td.ctxt{min-width:300px}
+.permtable td.proj{min-width:200px}
+.filters{display:grid;grid-template-columns:2fr repeat(3,1fr) 1fr 1fr;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border);align-items:end}
+@media (max-width:900px){.filters{grid-template-columns:1fr 1fr}}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field label,.lbl{font-size:.78rem;font-weight:500;color:var(--text-2)}
+.field .help{font-size:.78rem;color:var(--muted)}
+input[type=text],input[type=email],input[type=tel],input[type=date],input[type=number],input[type=search],select,textarea{width:100%;min-width:0;padding:7px 10px;border:1px solid var(--border-strong);border-radius:6px;background:var(--surface);min-height:36px}
+textarea{min-height:90px;resize:vertical;line-height:1.45}
+input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--focus);outline-offset:0;border-color:var(--focus)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:7px 14px;border-radius:6px;border:1px solid var(--border-strong);background:var(--surface);cursor:pointer;font-weight:500;font-size:.88rem;min-height:36px;text-decoration:none;color:var(--text);white-space:nowrap}
+.btn:hover:not(:disabled){background:var(--surface-2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn.primary:hover:not(:disabled){background:var(--accent-hover)}
+.btn.danger{color:var(--crit);border-color:var(--crit)}
+.btn.small{padding:3px 10px;min-height:28px;font-size:.8rem}
+.btn.link{border:0;background:none;color:var(--accent);padding:0;min-height:0;text-decoration:underline}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.lock{font-size:.72rem;color:var(--muted);font-weight:400}
+.chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.chip-x{display:inline-flex;gap:6px;align-items:center;background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:2px 4px 2px 10px;font-size:.8rem;font-weight:500}
+.chip-x button{border:0;background:none;color:inherit;cursor:pointer;padding:0 6px;font-size:1rem;line-height:1}
+/* record */
+.rec-head{padding:16px}
+.rec-title{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.rec-title .mono{font-size:1.15rem;font-weight:500}
+.rec-sub{color:var(--text-2);margin-top:4px}
+.stepper{display:flex;list-style:none;margin:16px 0 0;padding:0;overflow-x:auto;gap:0}
+.stepper li{flex:1 0 96px;position:relative;padding-top:18px;font-size:.74rem;color:var(--muted);text-align:center;line-height:1.25;padding-left:4px;padding-right:4px}
+.stepper li::before{content:"";position:absolute;top:6px;left:0;right:0;height:2px;background:var(--border)}
+.stepper li:first-child::before{left:50%} .stepper li:last-child::before{right:50%}
+.stepper li::after{content:"";position:absolute;top:1px;left:calc(50% - 6px);width:12px;height:12px;border-radius:50%;background:var(--surface);border:2px solid var(--border-strong);box-sizing:border-box}
+.stepper li.done{color:var(--text-2)} .stepper li.done::before{background:var(--accent)} .stepper li.done::after{background:var(--accent);border-color:var(--accent)}
+.stepper li.cur{color:var(--text);font-weight:600} .stepper li.cur::before{background:linear-gradient(90deg,var(--accent) 50%,var(--border) 50%)} .stepper li.cur::after{border-color:var(--accent);background:var(--surface);box-shadow:0 0 0 3px var(--accent-soft)}
+.stepper li.off::after{border-color:var(--crit);background:var(--crit)}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:12px 16px;border-top:1px solid var(--border);background:var(--surface-2);border-radius:0 0 10px 10px}
+.actions .hint{font-size:.8rem;color:var(--muted);flex-basis:100%}
+.confirm{padding:12px 16px;border-top:1px solid var(--border);background:var(--warn-soft);display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:.9rem}
+.confirm.crit{background:var(--crit-soft)}
+.confirm .grow{flex:1 1 240px}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);overflow-x:auto;margin-top:16px}
+.tabs button{border:0;background:none;padding:10px 14px;cursor:pointer;color:var(--text-2);font-weight:500;border-bottom:2px solid transparent;white-space:nowrap;margin-bottom:-1px}
+.tabs button[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent)}
+.tabs .count{font-size:.72rem;background:var(--surface-3);border-radius:999px;padding:0 7px;margin-left:4px;font-variant-numeric:tabular-nums;color:var(--text-2)}
+.tabpanel{margin-top:16px}
+dl.kv{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px 20px;margin:0}
+dl.kv div{min-width:0}
+dl.kv dt{font-size:.75rem;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.04em}
+dl.kv dd{margin:2px 0 0;overflow-wrap:anywhere}
+.section-title{font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;margin:20px 0 8px}
+.cond{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;padding:12px 16px;border-top:1px solid var(--border)}
+.cond:first-child{border-top:0}
+.cond.excluded .ctext,.cond.excluded .ctitle{opacity:.55;text-decoration:line-through}
+.cond input[type=checkbox]{width:18px;height:18px;margin-top:3px;accent-color:var(--accent)}
+.ctitle{display:flex;gap:8px;flex-wrap:wrap;align-items:baseline}
+.ctext{font-size:.88rem;color:var(--text-2);margin-top:2px}
+.why{font-size:.76rem;color:var(--muted)}
+.why b{color:var(--accent);font-weight:500}
+.cond .tools{grid-column:2;display:flex;gap:10px;margin-top:4px}
+.ph{background:var(--warn-soft);color:var(--warn);padding:0 3px;border-radius:3px;font-weight:500}
+.notice{display:flex;gap:10px;padding:10px 14px;border-radius:8px;background:var(--info-soft);color:var(--text);font-size:.86rem;align-items:flex-start;border:1px solid var(--border)}
+.notice.warn{background:var(--warn-soft)} .notice.good{background:var(--good-soft)} .notice.crit{background:var(--crit-soft)}
+.notice b{font-weight:600}
+.path{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-size:.82rem;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:10px 12px;overflow-wrap:anywhere}
+.path .sep{color:var(--muted);padding:0 4px}
+.path .hl{color:var(--accent);font-weight:500}
+.sig{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;padding:14px 16px;border-top:1px solid var(--border)}
+.sig:first-child{border-top:0}
+.sig .n{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--surface-3);font-weight:600;font-size:.85rem;font-variant-numeric:tabular-nums}
+.sig .n.ok{background:var(--good);color:var(--on-accent)}
+.audit{list-style:none;margin:0;padding:0}
+.audit li{display:grid;grid-template-columns:150px minmax(0,1fr);gap:4px 14px;padding:10px 16px;border-top:1px solid var(--border);font-size:.86rem}
+.audit li:first-child{border-top:0}
+.audit time{font-variant-numeric:tabular-nums;color:var(--text-2);font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-size:.78rem}
+.audit .actor{color:var(--muted);font-size:.78rem}
+@media (max-width:560px){.audit li{grid-template-columns:minmax(0,1fr)}}
+.ci{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px 16px;border-top:1px solid var(--border)}
+.ci:first-child{border-top:0}
+@media (max-width:560px){.ci,.sig{grid-template-columns:auto minmax(0,1fr)} .ci > :last-child,.sig > :last-child{grid-column:2}}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 16px}
+.form-grid .full{grid-column:1/-1}
+@media (max-width:640px){.form-grid{grid-template-columns:minmax(0,1fr)}}
+.imps{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px}
+.imp{display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 10px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;cursor:pointer;background:var(--surface)}
+.imp:hover{border-color:var(--border-strong)}
+.imp:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.imp input{width:18px;height:18px;margin:2px 0 0;accent-color:var(--accent);grid-row:span 2}
+.imp span{font-weight:500;font-size:.9rem}
+.imp small{color:var(--muted);font-size:.78rem;line-height:1.35}
+.err{color:var(--crit);font-size:.78rem}
+.two{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:900px){.two{grid-template-columns:minmax(0,1fr)}}
+.chart{width:100%;height:auto;display:block}
+.chart text{fill:var(--text-2);font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:12px}
+.chart .val{fill:var(--text);font-weight:600;font-variant-numeric:tabular-nums}
+.chart .gl{stroke:var(--grid);stroke-width:1}
+.chart .axis{stroke:var(--border-strong)}
+.chart .bar{fill:var(--chart-1)}
+.chart .bar2{fill:var(--chart-2)}
+.chartwrap{overflow-x:auto;padding:8px 16px 16px}
+.chartwrap svg.wide{min-width:560px}
+/* toasts */
+.toasts{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:max(16px,env(safe-area-inset-bottom,0px));z-index:60;display:flex;flex-direction:column;gap:8px;width:min(420px,calc(100vw - 32px))}
+.toast{background:var(--surface);border:1px solid var(--border-strong);border-left:4px solid var(--accent);border-radius:8px;padding:10px 12px;box-shadow:var(--shadow);font-size:.85rem;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;animation:tin .18s ease-out}
+.toast b{font-weight:600}
+.toast .flow{grid-column:1;color:var(--text-2);font-size:.8rem}
+.toast button{grid-row:1/span 2;grid-column:2;border:0;background:none;cursor:pointer;color:var(--muted);font-size:1.1rem;align-self:start}
+@keyframes tin{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
+/* modal */
+.scrim{position:fixed;inset:0;background:var(--scrim);z-index:50;display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:max(24px,env(safe-area-inset-top,0px)) 16px 24px}
+.modal{background:var(--surface);border-radius:10px;width:min(820px,100%);box-shadow:var(--shadow);border:1px solid var(--border)}
+.modal .card-head{position:sticky;top:0;background:var(--surface);border-radius:10px 10px 0 0;z-index:1}
+.docpaper{background:var(--doc-paper);color:var(--doc-ink);margin:16px;padding:32px clamp(16px,5vw,48px);border:1px solid var(--border);border-radius:4px;font-family:"IBM Plex Sans",Georgia,serif;font-size:.9rem}
+.docpaper h2{text-align:center;font-size:1.05rem;letter-spacing:.06em;text-transform:uppercase}
+.docpaper .center{text-align:center;margin:4px 0 18px;font-size:.85rem}
+.docpaper table{font-size:.85rem;margin-bottom:18px}
+.docpaper th,.docpaper td{border-bottom:1px solid var(--border-strong);background:transparent;color:var(--doc-ink);text-transform:none;letter-spacing:0;font-size:.85rem;padding:6px 8px}
+.docpaper th{width:34%;font-weight:600}
+.docpaper ol{padding-left:1.4em}
+.docpaper ol li{margin-bottom:10px}
+.docpaper .cat{font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;opacity:.7}
+.docpaper .sigline{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:28px}
+.docpaper .sigline div{border-top:1px solid var(--doc-ink);padding-top:4px;font-size:.8rem}
+.docpaper .ph{background:transparent;color:inherit;border-bottom:2px dotted currentColor;border-radius:0}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.muted{color:var(--muted)}
+.mt8{margin-top:8px}.mt16{margin-top:16px}.mb16{margin-bottom:16px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.rt-results{list-style:none;margin:0;padding:0}
+.rt-results li{padding:8px 0;border-top:1px solid var(--border);font-size:.86rem}
+.rt-results li:first-child{border-top:0}
+.rtpanel{position:sticky;top:80px;max-height:calc(100vh - 96px);overflow:auto}
+@media (max-width:900px){.rtpanel{position:static;max-height:none}}
+.switch{position:relative;display:inline-flex;align-items:center;gap:6px;font-size:.82rem}
+.switch input{width:16px;height:16px;accent-color:var(--accent)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+</style>
+
+<div class="banner" role="note"><div class="wrap"><b>MOCK-UP</b><span>Mock-up — sample data. The real app is built in Power Apps on SharePoint.</span></div></div>
+<header class="top">
+  <div class="wrap topbar">
+    <div class="brand">
+      <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect x="1" y="1" width="26" height="26" rx="6" fill="var(--accent)"/><path d="M8 19l4-8 3 5 2-3 3 6z" fill="var(--on-accent)"/></svg>
+      <div>SUP Coordinator<small>Special Use Permits</small></div>
+    </div>
+    <nav class="main" aria-label="Main">
+      <a href="#dashboard" data-nav="dashboard">Dashboard</a>
+      <a href="#permits" data-nav="permits">Permits</a>
+      <a href="#new" data-nav="new">New application</a>
+      <a href="#conditions" data-nav="conditions">Condition library</a>
+      <a href="#reports" data-nav="reports">Reports</a>
+    </nav>
+    <div class="role">
+      <label for="role-select">Viewing as</label>
+      <select id="role-select">
+        <option value="coord">Coordinator</option>
+        <option value="comp">Compliance staff</option>
+        <option value="appr">Approving official (Superintendent)</option>
+      </select>
+    </div>
+  </div>
+</header>
+<main class="wrap" id="app" tabindex="-1"></main>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<div id="modal-root"></div>
+
+<script>
+(function(){
+"use strict";
+/* ================= constants from spec/data-model.md ================= */
+const STATUSES=["Received","Under Review","Draft Permit","Out for Permittee Signature","Out for Superintendent Signature","Executed","Active","Closed"];
+const OFFRAMPS=["Withdrawn","Denied"];
+const CLOSED_SET=new Set(["Closed","Withdrawn","Denied"]);
+const IMPACTS=[
+ ["Ground disturbance","Digging, trenching, grading, staking, post holes, or vehicle ruts."],
+ ["Near stream, river or wetland","Any activity within about 100 ft of a stream, river, pond, or wetland."],
+ ["Tree clearing","Cutting, trimming, or removing trees or large limbs."],
+ ["Structures or temporary facilities","Tents, stages, staging areas, portable toilets, fencing, signage."],
+ ["Motorized equipment or vehicles off road","Vehicles, ATVs, or heavy equipment off established roads."],
+ ["Large group or public event","More than about 50 people at once, or open to the public."],
+ ["Night activity or lighting","Any activity after sunset or temporary lighting."],
+ ["Commercial filming or photography","Paid or commercial video, film, or still photography."],
+ ["Utility or right-of-way work","Utility lines, pipes, poles, easements, or right-of-way work."],
+ ["Use of drones (UAS)","Any unmanned aircraft launch, landing, or flight."]
+];
+const IMPACT_NAMES=IMPACTS.map(i=>i[0]);
+const PERMIT_TYPES=[
+ {title:"Special Event",term:30,prefix:"EVT",template:"SUP_Template_SpecialEvent.docx"},
+ {title:"Commercial Filming / Photography",term:60,prefix:"FLM",template:"SUP_Template_Filming.docx"},
+ {title:"Right-of-Way / Utility",term:365,prefix:"ROW",template:"SUP_Template_ROW.docx"},
+ {title:"Research / Collection",term:365,prefix:"RES",template:"SUP_Template_Research.docx"},
+ {title:"Construction / Access",term:180,prefix:"CON",template:"SUP_Template_Construction.docx"},
+ {title:"Agricultural Use",term:365,prefix:"AGR",template:"SUP_Template_Agricultural.docx"}
+];
+const CATEGORIES=["General","Insurance & Liability","Cultural Resources","Soils & Erosion","Water Resources","Wildlife","Vegetation","Public Safety","Operations"];
+const ROLES={coord:"Coordinator",comp:"Compliance staff",appr:"Approving official (Superintendent)"};
+const ACTORS={coord:"coordinator@agency.example",comp:"compliance@agency.example",appr:"superintendent@agency.example"};
+const SITE="/sites/SpecialUsePermits/PermitRecords";
+
+/* ConditionLibrary — from kit/ConditionLibrary-seed.csv */
+const L=(code,title,cat,text,types,trig,always,sort)=>({code,title,category:cat,text,types:types?types.split(";"):[],triggers:trig?trig.split(";"):[],always,active:true,sort});
+const LIBRARY=[
+L("GEN-01","Permit on site","General","The permittee shall keep a copy of this permit, including all conditions and attachments, at the work or activity site at all times and shall present it to any authorized official upon request.","","",true,10),
+L("GEN-02","Scope limited to permit","General","Activities are limited to the dates, location, and scope described in this permit. Any change in dates, location, methods, or scope requires written approval before the change is made.","","",true,20),
+L("GEN-03","Compliance with laws","General","The permittee shall comply with all applicable federal, state, and local laws, regulations, and ordinances, and shall obtain any other permits or approvals required for the activity.","","",true,30),
+L("GEN-04","Site restoration","General","Upon completion of the activity, the permittee shall remove all equipment, materials, and debris and restore the site to its pre-activity condition, or better, to the satisfaction of the issuing office.","","",true,40),
+L("INS-01","Certificate of insurance","Insurance & Liability","The permittee shall maintain commercial general liability insurance in the amount specified in the permit for the full term of the permit, naming the issuing agency as additional insured. A current certificate of insurance must be on file before any activity begins.","","",true,50),
+L("INS-02","Indemnification","Insurance & Liability","The permittee shall indemnify and hold harmless the issuing agency, its officers, and employees from any claims, damages, or losses arising from the permittee's activities under this permit.","","",true,60),
+L("CUL-01","Inadvertent discovery – stop work","Cultural Resources","If any archaeological, historic, or cultural materials, or human remains, are discovered during the activity, the permittee shall immediately stop all work within 100 feet of the discovery, protect the area, and notify the issuing office. Work shall not resume in that area until written authorization is given.","","Ground disturbance",false,100),
+L("CUL-02","No collection of artifacts","Cultural Resources","The permittee shall not disturb, remove, or collect any artifacts, historic objects, or cultural materials.","","Ground disturbance;Commercial filming or photography",false,110),
+L("SOI-01","Erosion and sediment control","Soils & Erosion","Before any ground disturbance, the permittee shall install and maintain erosion and sediment control measures (such as silt fence, straw wattles, or equivalent) and shall keep them in effective condition until disturbed areas are stabilized.","","Ground disturbance;Utility or right-of-way work",false,200),
+L("SOI-02","Topsoil and revegetation","Soils & Erosion","Topsoil removed during excavation shall be stockpiled separately and replaced. Disturbed areas shall be reseeded with an approved native seed mix within 14 days of final grading.","","Ground disturbance",false,210),
+L("SOI-03","Wet-weather restriction","Soils & Erosion","Vehicles and equipment shall not operate on saturated soils where ruts deeper than 4 inches would result. Work shall be suspended during such conditions.","","Motorized equipment or vehicles off road",false,220),
+L("WAT-01","Riparian buffer protection","Water Resources","No vegetation removal, ground disturbance, equipment staging, or material storage shall occur within 100 feet of any stream, river, or wetland edge unless specifically shown on the approved site plan.","","Near stream, river or wetland",false,300),
+L("WAT-02","No refueling within buffer","Water Resources","Fueling, lubrication, and maintenance of vehicles and equipment shall occur at least 100 feet from any stream, river, or wetland. A spill kit shall be kept on site, and any spill shall be reported to the issuing office immediately.","","Near stream, river or wetland;Motorized equipment or vehicles off road",false,310),
+L("WLD-01","Tricolored bat seasonal clearing restriction","Wildlife","To protect roosting bats, cutting or removal of trees 3 inches or greater in diameter is prohibited from [START DATE – confirm with biologist] through [END DATE – confirm with biologist]. Any clearing outside this window must be completed as described in the approved site plan.","","Tree clearing",false,400),
+L("VEG-01","Tree protection and clearing limits","Vegetation","Clearing limits shall be flagged and approved by the issuing office before any tree cutting. Trees outside the flagged limits shall be protected from damage. Cut material shall be disposed of as directed by the issuing office.","","Tree clearing",false,500),
+L("SAF-01","Event safety and crowd management","Public Safety","The permittee shall provide adequate restroom facilities, trash receptacles, first aid, and trained staff for crowd management, and shall keep trails, roads, and emergency access routes open to the public and emergency vehicles at all times.","Special Event","Large group or public event",false,600),
+L("SAF-02","Temporary structures","Public Safety","Temporary structures, tents, and stages shall be anchored without stakes deeper than 12 inches unless approved, shall comply with applicable fire and building codes, and shall be removed within 48 hours after the activity ends.","","Structures or temporary facilities",false,610),
+L("SAF-03","Night lighting","Public Safety","Night lighting shall be shielded and directed downward, shall be limited to the work or activity area, and shall be turned off no later than the time stated in the permit.","","Night activity or lighting",false,620),
+L("OPS-01","Filming and photography operations","Operations","Filming and photography shall not block public access or use of facilities except as approved in the permit. Crew size, vehicles, and equipment shall not exceed the numbers listed in the permit. No props, sets, or special effects may alter natural features.","Commercial Filming / Photography","Commercial filming or photography",false,700),
+L("OPS-02","Unmanned aircraft (drones)","Operations","Drone operations shall be conducted by a certified remote pilot in compliance with all applicable aviation regulations, only within the approved area and times, and shall maintain a minimum distance of 100 feet from visitors, wildlife, and structures not involved in the activity.","","Use of drones (UAS)",false,710),
+L("OPS-03","Motorized equipment limits","Operations","Motorized vehicles and equipment shall remain on existing roads and the approved access route unless off-road travel is shown on the approved site plan. Equipment shall be free of soil and plant material before entering the site to prevent the spread of invasive species.","","Motorized equipment or vehicles off road",false,720),
+L("OPS-04","Utility locate and notification","Operations","Before any excavation, the permittee shall request utility locates through the applicable one-call notification system and shall notify the issuing office at least 5 business days before work begins.","Right-of-Way / Utility;Construction / Access","Utility or right-of-way work;Ground disturbance",false,730)
+];
+
+/* ================= dates ================= */
+const DAY=86400000;
+const pad=n=>String(n).padStart(2,"0");
+const sod=d=>{const x=new Date(d);x.setHours(0,0,0,0);return x;};
+const TODAY=sod(new Date());
+const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x;};
+const iso=d=>d?`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`:"";
+const fmt=d=>d?d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}):"—";
+const fmtShort=d=>d?d.toLocaleDateString("en-US",{month:"short",day:"numeric"}):"—";
+const fmtTime=d=>`${iso(d)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const daysUntil=d=>Math.round((sod(d)-TODAY)/DAY);
+const parseISO=s=>{if(!s)return null;const[y,m,dd]=s.split("-").map(Number);return new Date(y,m-1,dd);};
+/* Sample data was authored against 2026-11-23; every date is shifted by (today − anchor) so reminders stay live. */
+const ANCHOR=new Date(2026,10,23);
+const SHIFT=Math.round((TODAY-ANCHOR)/DAY);
+const sd=s=>s?addDays(parseISO(s),SHIFT):null;
+const at=(d,h,m)=>{const x=new Date(d);x.setHours(h,m||0,0,0);return x;};
+
+/* ================= helpers ================= */
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const shortName=s=>String(s||"").replace(/[~"#%&*:<>?\/\\{|}\s]/g,"").slice(0,30);
+const folderName=p=>`${p.number}_${shortName(p.org||p.name)}_${shortName(p.location)}`;
+const isClosed=p=>CLOSED_SET.has(p.status);
+const folderTop=p=>isClosed(p)?"Closed Projects":"Open Projects";
+const statusIdx=s=>STATUSES.indexOf(s);
+const typeOf=t=>PERMIT_TYPES.find(x=>x.title===t);
+const hlPlaceholders=t=>esc(t).replace(/\[([^\]]+)\]/g,'<span class="ph">[$1]</span>');
+
+function suggestFor(type,impacts){
+  /* Rule (spec): Active AND (AppliesToTypes empty OR contains type) AND (AlwaysInclude OR TriggerImpacts ∩ Impacts ≠ ∅) */
+  const out=[];
+  for(const c of LIBRARY.slice().sort((a,b)=>a.sort-b.sort)){
+    if(!c.active)continue;
+    if(c.types.length&&!c.types.includes(type))continue;
+    const hits=c.triggers.filter(t=>impacts.includes(t));
+    if(c.always||hits.length){
+      out.push({lib:c,why:c.always?"Always included"+(c.types.length?` for ${c.types.join(", ")}`:""):"Triggered by: "+hits.join(", ")});
+    }
+  }
+  return out;
+}
+
+/* ================= sample data (fictitious; mirrors kit/Permits-sample.csv plus two extra records) ================= */
+const RAW=[
+["SUP-2026-0001","Right-of-Way / Utility","Closed","Dana Whitfield","Ridgeline Electric Cooperative","dana.whitfield@example.com","555-0101","Pole replacement along Cedar Run Road","Replace six distribution poles within existing right-of-way.","Cedar Run Road","Utility or right-of-way work;Ground disturbance;Motorized equipment or vehicles off road","2026-01-12","2026-03-01","2026-04-15","2026-05-31",true,"2027-01-31","2026-02-10","2026-02-14",true,"2026-06-15"],
+["SUP-2026-0002","Special Event","Closed","Marcus Ellery","Valley Trail Runners Club","m.ellery@example.org","555-0102","Autumn Ridge 10K","Trail running race with about 300 participants and a finish-area tent.","Ridge Overlook Trailhead","Large group or public event;Structures or temporary facilities","2026-06-02","2026-09-26","2026-09-26","2026-09-30",true,"2027-06-01","2026-08-20","2026-08-25",true,"2026-10-02"],
+["SUP-2026-0003","Commercial Filming / Photography","Withdrawn","Priya Natarajan","Lumen Fieldworks LLC","priya@example.net","555-0103","Waterfall time-lapse shoot","Two-person crew filming time-lapse at the falls with a drone.","Hollow Falls","Commercial filming or photography;Use of drones (UAS)","2026-07-08","2026-08-15","2026-08-17","2026-08-31",false,"","","",false,"2026-07-30"],
+["SUP-2026-0004","Construction / Access","Denied","Tom Brannigan","Brannigan Excavating","tbrannigan@example.com","555-0104","Private driveway across park land","Construct a gravel driveway crossing a stream to reach adjacent private parcel.","Mill Creek Boundary","Ground disturbance;Near stream, river or wetland;Tree clearing","2026-05-19","2026-09-01","2026-12-31","2027-01-31",false,"","","",false,"2026-08-04"],
+["SUP-2026-0005","Research / Collection","Active","Dr. Helen Osei","Eastern Highlands University","h.osei@example.edu","555-0105","Stream macroinvertebrate survey","Quarterly kick-net sampling at five stream stations.","Mill Creek","Near stream, river or wetland","2026-02-03","2026-03-15","2027-03-15","2026-12-23",true,"2027-03-31","2026-03-01","2026-03-04",false,""],
+["SUP-2026-0006","Agricultural Use","Active","Ray Callahan","Callahan Family Farm","ray.callahan@example.com","555-0106","Hay cutting – North Meadow","Annual hay cutting with tractor on 40-acre meadow.","North Meadow","Motorized equipment or vehicles off road","2026-01-20","2026-05-01","2026-10-31","2027-01-22",true,"2026-12-23","2026-04-10","2026-04-12",false,""],
+["SUP-2026-0007","Special Event","Executed","Lena Morales","Harvest Lantern Committee","lena.morales@example.org","555-0107","Winter Lantern Walk","Evening guided lantern walk for about 150 people with temporary lighting.","Visitor Center Loop","Large group or public event;Night activity or lighting;Structures or temporary facilities","2026-09-14","2026-12-12","2026-12-13","2026-12-31",true,"2026-11-30","2026-11-02","2026-11-05",false,""],
+["SUP-2026-0008","Right-of-Way / Utility","Out for Superintendent Signature","Grant Ivers","Summit Fiber Networks","givers@example.net","555-0108","Fiber conduit bore under Park Road","Directional bore for fiber conduit; two staging pits.","Park Road Mile 3","Utility or right-of-way work;Ground disturbance;Tree clearing","2026-09-30","2027-01-11","2027-02-26","2027-03-31",true,"2027-09-30","2026-11-18","",false,""],
+["SUP-2026-0009","Commercial Filming / Photography","Out for Permittee Signature","Owen Stratford","Northlight Studio Co.","owen@example.com","555-0109","Outdoor apparel catalog shoot","Six-person crew photographing models on overlooks; one drone.","Ridge Overlook","Commercial filming or photography;Use of drones (UAS)","2026-10-21","2026-12-23","2026-12-24","2026-12-31",true,"2027-10-01","","",false,""],
+["SUP-2026-0010","Construction / Access","Draft Permit","Alicia Brandt","Brandt Builders Inc.","abrandt@example.com","555-0110","Temporary access for culvert repair","Temporary construction access and culvert replacement near wetland.","Beaver Pond Road","Ground disturbance;Near stream, river or wetland;Motorized equipment or vehicles off road;Tree clearing","2026-10-28","2026-12-07","2027-01-29","2027-02-28",false,"","","",false,""],
+["SUP-2026-0011","Research / Collection","Under Review","Samuel Ortiz","Highland Bat Study Group","s.ortiz@example.org","555-0111","Acoustic bat monitoring","Deploy eight acoustic detectors on trees; night visits to retrieve data.","South Ridge Forest","Night activity or lighting","2026-11-09","2027-04-01","2027-09-30","2027-10-31",false,"","","",false,""],
+["SUP-2026-0012","Special Event","Received","Jordan Pike","Riverside Community Choir","jpike@example.org","555-0112","Spring Concert on the Green","Outdoor choir concert with portable stage and sound system.","Riverside Green","Large group or public event;Structures or temporary facilities;Near stream, river or wetland","2026-11-20","2027-05-15","2027-05-15","2027-05-31",false,"","","",false,""],
+["SUP-2026-0013","Construction / Access","Under Review","Casey Lindqvist","River Bend Outfitters","casey@example.com","555-0113","Mill Creek Trail footbridge and access","Replace a footbridge and regrade 300 ft of trail approach; remove four hazard trees.","Mill Creek Trail","Ground disturbance;Near stream, river or wetland;Tree clearing;Structures or temporary facilities","2026-11-13","2026-12-21","2027-02-15","2027-03-31",false,"","","",false,""],
+["SUP-2026-0014","Commercial Filming / Photography","Active","Noor Haddad","Blue Heron Photography","noor@example.net","555-0114","Seasonal wildlife photo workshops","Small-group photography workshops on the marsh boardwalk, Oct–Jan.","Heron Marsh Boardwalk","Commercial filming or photography;Near stream, river or wetland","2026-08-11","2026-10-01","2027-01-31","2027-02-28",true,"2027-08-15","2026-09-18","2026-09-21",false,""]
+];
+
+let nextId=1;
+const permits=[];
+function newPermit(o){
+  return Object.assign({id:nextId++,conditions:[],docs:[],compliance:[],audit:[],draftVersion:0,sigSent:null,signatureId:"",coordinator:"J. Alvarez",superintendent:"R. Okafor",condDirty:false},o);
+}
+function audit(p,type,detail,time,actor){p.audit.push({time:time||new Date(),type,detail,actor:actor||ACTORS[state.role]});}
+function addDoc(p,name,docType,time){let n=name,k=2;const dot=name.lastIndexOf(".");while(p.docs.some(d=>d.name===n)){n=name.slice(0,dot)+"_"+(k++)+name.slice(dot);}p.docs.push({name:n,docType,added:time||new Date()});return n;}
+function seedConditions(p,time){
+  p.conditions=suggestFor(p.type,p.impacts).map((s,i)=>({code:s.lib.code,title:s.lib.title,category:s.lib.category,text:s.lib.text,source:"Suggested",included:true,why:s.why,sort:s.lib.sort}));
+}
+function complianceTemplate(p){
+  const items=[{title:"Pre-activity check-in with permittee",due:addDays(p.start,-3)}];
+  if(p.impacts.includes("Ground disturbance"))items.push({title:"Erosion control inspection",due:addDays(p.start,7)});
+  if(p.impacts.includes("Near stream, river or wetland"))items.push({title:"Riparian buffer spot check",due:addDays(p.start,14)});
+  if(p.impacts.includes("Large group or public event"))items.push({title:"Event-day monitoring visit",due:p.start});
+  items.push({title:"Final site restoration inspection",due:addDays(p.end,14)});
+  return items.map(i=>({title:i.title,due:i.due,completed:false,completedDate:null,assigned:"M. Chen (Compliance)"}));
+}
+
+const C="coordinator@agency.example", CP="compliance@agency.example", SU="superintendent@agency.example", FLOW="flow: SUP-Intake";
+function buildSample(r){
+  let [number,type,status,name,org,email,phone,title,desc,loc,imp,rcv,st,en,exp,coi,coiExp,psig,ssig,cc,closed]=r;
+  number=number.replace(/^SUP-\d{4}/,"SUP-"+sd(rcv).getFullYear());
+  const p=newPermit({number,type,status,name,org,email,phone,title,desc,location:loc,impacts:imp.split(";"),
+    received:sd(rcv),start:sd(st),end:sd(en),expiration:sd(exp),coiReceived:coi,coiExp:sd(coiExp),
+    permitteeSigned:sd(psig),supSigned:sd(ssig),complianceComplete:cc,closedDate:sd(closed)});
+  const si=statusIdx(status);
+  const R=p.received;
+  audit(p,"Created",`Application received from Microsoft Forms. Folder created: Permit Records/Open Projects/${folderName(p)}`,at(R,9,14),FLOW);
+  addDoc(p,`${number}_Application.pdf`,"Application",at(R,9,14));
+  if(["SUP-2026-0004","SUP-2026-0008","SUP-2026-0010","SUP-2026-0013"].includes(number)){
+    addDoc(p,`${number}_SitePlan_1.pdf`,"Site Plan",at(R,9,15));audit(p,"Document Added",`${number}_SitePlan_1.pdf`,at(R,9,15),FLOW);
+  }
+  const reviewDate=addDays(R,2);
+  const off=OFFRAMPS.includes(status);
+  if(si>=1||off){audit(p,"Status Changed","Received → Under Review",at(reviewDate,10,2),C);}
+  if(number==="SUP-2026-0011"){
+    seedConditions(p);
+    p.conditions.push({code:"VEG-01",title:"Tree protection and clearing limits",category:"Vegetation",text:"Detectors shall be attached to trees with non-penetrating straps only. No limbs shall be cut or trimmed to place or access detectors.",source:"Added by staff",included:true,why:"Added by staff (edited)",sort:500});
+    audit(p,"Field Changed",`Conditions suggested (${p.conditions.length-1}); VEG-01 added by staff with edited text`,at(addDays(R,3),14,40),C);
+  }
+  if(status==="Denied"){audit(p,"Status Changed","Under Review → Denied. Reason: stream crossing not consistent with management plan.",at(p.closedDate,11,20),C);}
+  if(status==="Withdrawn"){addDoc(p,`${number}_Correspondence_${iso(addDays(p.closedDate,-1))}.pdf`,"Correspondence",at(addDays(p.closedDate,-1),15,5));audit(p,"Status Changed","Under Review → Withdrawn (applicant request by email)",at(p.closedDate,8,50),C);}
+  if(off){audit(p,"Moved to Closed",`Folder moved to Permit Records/Closed Projects/${folderName(p)}`,at(p.closedDate,8,52),"flow: SUP-Close");}
+  if(si>=2){
+    const sent=p.permitteeSigned?addDays(p.permitteeSigned,-5):(status==="Out for Permittee Signature"?addDays(TODAY,-9):null);
+    const draftDate=sent?addDays(sent,-2):addDays(TODAY,-4);
+    seedConditions(p);
+    p.draftVersion=number==="SUP-2026-0010"?2:1;
+    for(let v=1;v<=p.draftVersion;v++){const dd=addDays(draftDate,v-p.draftVersion);addDoc(p,`${number}_DraftPermit_v${v}.docx`,"Draft Permit",at(dd,13,30));audit(p,"Document Added",`${number}_DraftPermit_v${v}.docx generated from ${typeOf(type).template} with ${p.conditions.length} conditions`,at(dd,13,30),"flow: SUP-GenerateDraft");}
+    audit(p,"Status Changed","Under Review → Draft Permit",at(addDays(draftDate,1-p.draftVersion),13,31),C);
+    if(si>=3){
+      p.sigSent=sent;p.signatureId="ENV-"+number.slice(-4)+"-7C2"+number.slice(-1);
+      audit(p,"Signature Sent",`DraftPermit_v${p.draftVersion} sent to ${email} for e-signature (request ${p.signatureId})`,at(sent,9,5),"flow: SUP-SendForSignature");
+      audit(p,"Status Changed","Draft Permit → Out for Permittee Signature",at(sent,9,5),"flow: SUP-SendForSignature");
+    }
+    if(si>=3&&si<5&&!p.permitteeSigned&&daysUntil(sent)<=-7){audit(p,"Reminder Sent",`Signature reminder sent to ${email}`,at(addDays(sent,7),7,0),"flow: SUP-DailyReminders");}
+    if(p.permitteeSigned){
+      audit(p,"Signed",`Permittee signed (${name})`,at(p.permitteeSigned,16,22),"flow: SUP-SignatureWebhook");
+      audit(p,"Status Changed","Out for Permittee Signature → Out for Superintendent Signature",at(p.permitteeSigned,16,22),"flow: SUP-SignatureWebhook");
+    }
+    if(p.supSigned){
+      audit(p,"Signed","Superintendent signed (R. Okafor)",at(p.supSigned,11,3),"flow: SUP-SignatureWebhook");
+      addDoc(p,`${number}_Executed.pdf`,"Executed Permit",at(p.supSigned,11,4));
+      audit(p,"Document Added",`${number}_Executed.pdf saved; copy emailed to permittee`,at(p.supSigned,11,4),"flow: SUP-SignatureWebhook");
+      audit(p,"Status Changed","Out for Superintendent Signature → Executed",at(p.supSigned,11,4),"flow: SUP-SignatureWebhook");
+    }
+  }
+  if(p.coiReceived){
+    const d=p.supSigned?addDays(p.supSigned,-3):(p.permitteeSigned?p.permitteeSigned:addDays(TODAY,-6));
+    addDoc(p,`${number}_COI_exp${iso(p.coiExp)}.pdf`,"COI",at(d,10,40));
+    audit(p,"Field Changed",`COIReceived = Yes; COIExpiration = ${iso(p.coiExp)}`,at(d,10,41),C);
+  }
+  if(si>=6){
+    const ad=addDays(p.supSigned,1);
+    audit(p,"Status Changed","Executed → Active",at(ad,9,0),C);
+    p.compliance=complianceTemplate(p);
+    p.compliance.forEach((c,i)=>{
+      const overdueDemo=number==="SUP-2026-0014"&&i===1;
+      if((status==="Closed"||daysUntil(c.due)<0)&&!overdueDemo){c.completed=true;c.completedDate=addDays(c.due,status==="Closed"?0:1);if(p.closedDate&&c.completedDate>=p.closedDate)c.completedDate=addDays(p.closedDate,-1);
+        addDoc(p,`${number}_Compliance_${iso(c.completedDate)}.pdf`,"Compliance Record",at(c.completedDate,15,10));
+        audit(p,"Field Changed",`Compliance item completed: ${c.title}`,at(c.completedDate,15,10),CP);}
+    });
+    if(number==="SUP-2026-0014"){p.compliance[1].due=addDays(TODAY,-4);}
+  }
+  if(status==="Closed"){
+    audit(p,"Status Changed","Active → Closed",at(p.closedDate,10,0),C);
+    audit(p,"Moved to Closed",`Folder moved to Permit Records/Closed Projects/${folderName(p)}`,at(p.closedDate,10,1),"flow: SUP-Close");
+  }
+  p.audit.sort((a,b)=>a.time-b.time);
+  return p;
+}
+
+/* ================= state ================= */
+const state={role:"coord",tab:"details",confirm:null,pf:{q:"",type:"",status:"",loc:"",from:"",to:"",quick:""},cf:{q:"",cat:""},rt:{type:"Construction / Access",imp:["Ground disturbance","Tree clearing"]},editCond:null,suggestRun:null,newResult:null,lastNew:null};
+RAW.forEach(r=>permits.push(buildSample(r)));
+const byId=id=>permits.find(p=>p.id===id);
+
+/* ================= derived ================= */
+const isOpen=p=>!isClosed(p);
+const unexecuted=p=>isOpen(p)&&statusIdx(p.status)<5;
+function reasons(p){
+  const out=[];
+  if(isClosed(p))return out;
+  const si=statusIdx(p.status);
+  const lvl=d=>d<=7?"crit":"warn";
+  if(unexecuted(p)&&p.start){const d=daysUntil(p.start);if(d<=30)out.push({label:d<0?`Start passed ${-d}d ago — not executed`:`Starts in ${d}d — not executed`,level:lvl(d),days:d,date:p.start});}
+  if(p.coiReceived&&p.coiExp){const d=daysUntil(p.coiExp);if(d<=30)out.push({label:d<0?`COI expired ${-d}d ago`:`COI expires in ${d}d`,level:lvl(d),days:d,date:p.coiExp});}
+  if(!p.coiReceived&&si>=2){const d=p.start?daysUntil(p.start):99;out.push({label:"COI not on file",level:d<=14?"crit":"warn",days:Math.min(d,60),date:p.start});}
+  if(si>=5&&p.expiration){const d=daysUntil(p.expiration);if(d<=60)out.push({label:d<0?`Permit expired ${-d}d ago`:`Permit expires in ${d}d`,level:d<=7?"crit":"warn",days:d,date:p.expiration});}
+  if(p.status==="Out for Permittee Signature"&&p.sigSent){const w=-daysUntil(p.sigSent);if(w>=7)out.push({label:`Awaiting permittee signature ${w}d`,level:"warn",days:30-w,date:p.sigSent});}
+  if(p.status==="Out for Superintendent Signature"){out.push({label:"Awaiting Superintendent signature",level:"info",days:20,date:p.permitteeSigned});}
+  p.compliance.filter(c=>!c.completed&&daysUntil(c.due)<0).forEach(c=>out.push({label:`Compliance overdue: ${c.title}`,level:"crit",days:daysUntil(c.due),date:c.due}));
+  if(p.status==="Received"){const a=-daysUntil(p.received);out.push({label:a>=5?`New application ${a}d — start review`:"New application — start review",level:"info",days:a>=5?10:25,date:p.received});}
+  return out;
+}
+const urgency=p=>{const r=reasons(p);if(!r.length)return Infinity;const rank={crit:0,warn:1,info:2};return Math.min(...r.map(x=>rank[x.level]*1000+x.days));};
+const QUICK={
+  open:{label:"Open permits",test:isOpen},
+  awaiting:{label:"Awaiting signature",test:p=>p.status==="Out for Permittee Signature"||p.status==="Out for Superintendent Signature"},
+  coi30:{label:"COI expiring ≤ 30 days",test:p=>isOpen(p)&&p.coiReceived&&p.coiExp&&daysUntil(p.coiExp)<=30},
+  unexec30:{label:"Unexecuted, start ≤ 30 days",test:p=>unexecuted(p)&&p.start&&daysUntil(p.start)<=30},
+  exp60:{label:"Expiring ≤ 60 days",test:p=>isOpen(p)&&statusIdx(p.status)>=5&&p.expiration&&daysUntil(p.expiration)<=60&&daysUntil(p.expiration)>=0}
+};
+function statusClass(s){
+  if(s==="Received"||s==="Under Review")return"info";
+  if(s==="Draft Permit")return"accent";
+  if(s.startsWith("Out for"))return"warn";
+  if(s==="Executed"||s.startsWith("Active"))return"good";
+  if(s==="Withdrawn"||s==="Denied")return"crit";
+  return"";
+}
+const STAGE_COLOR=["var(--info)","var(--info)","var(--accent)","var(--warn)","var(--warn)","var(--good)","var(--good)","var(--border-strong)"];
+const pill=(s)=>`<span class="pill ${statusClass(s)}">${esc(s)}</span>`;
+
+/* ================= permissions ================= */
+const PERM={"sup-sign":["appr"],"complete-item":["comp"]};
+function can(act){const allowed=PERM[act]||["coord"];return{ok:allowed.includes(state.role),need:allowed.map(r=>ROLES[r]).join(" / ")};}
+function btn(act,label,o){o=o||{};const c=can(act);const dis=!c.ok||o.disabled;
+  const why=!c.ok?`Requires role: ${c.need}`:(o.why||"");
+  return `<button type="button" class="btn ${o.cls||""}" data-act="${act}" ${o.arg!=null?`data-arg="${esc(o.arg)}"`:""} ${dis?"disabled":""} ${why?`title="${esc(why)}"`:""}>${label}${!c.ok?` <span class="lock">· ${esc(c.need.split(" (")[0])} only</span>`:""}</button>`;}
+
+/* ================= toasts ================= */
+function toast(title,flow){
+  const t=document.createElement("div");t.className="toast";t.setAttribute("role","status");
+  t.innerHTML=`<b>${esc(title)}</b><span class="flow">${esc(flow)}</span><button type="button" aria-label="Dismiss">×</button>`;
+  t.querySelector("button").onclick=()=>t.remove();
+  const box=document.getElementById("toasts");box.appendChild(t);
+  while(box.children.length>3)box.firstChild.remove();
+  setTimeout(()=>t.remove(),7000);
+}
+
+/* ================= views ================= */
+function viewDashboard(){
+  const open=permits.filter(isOpen);
+  const k=Object.entries(QUICK).map(([key,q])=>({key,label:q.label,v:permits.filter(q.test).length}));
+  const kcls={open:"good",awaiting:"info",coi30:"warn",unexec30:"crit",exp60:"warn"};
+  const queue=open.filter(p=>reasons(p).length).sort((a,b)=>urgency(a)-urgency(b));
+  const counts=STATUSES.map(s=>permits.filter(p=>p.status===s).length);
+  const offc=OFFRAMPS.map(s=>permits.filter(p=>p.status===s).length);
+  const total=counts.reduce((a,b)=>a+b,0)+offc.reduce((a,b)=>a+b,0);
+  const ms=[];
+  permits.filter(isOpen).forEach(p=>{
+    const add=(d,label)=>{if(d){const n=daysUntil(d);if(n>=0&&n<=30)ms.push({d,n,p,label});}};
+    if(unexecuted(p)||statusIdx(p.status)===5)add(p.start,"Proposed start");
+    if(statusIdx(p.status)>=5)add(p.end,"Activity ends");
+    if(statusIdx(p.status)>=5)add(p.expiration,"Permit expires");
+    if(p.coiReceived)add(p.coiExp,"COI expires");
+    p.compliance.filter(c=>!c.completed).forEach(c=>add(c.due,"Compliance due: "+c.title));
+  });
+  ms.sort((a,b)=>a.d-b.d);
+  return `
+  <div class="page-head"><div><h1>Permit desk</h1><p>${esc(fmt(TODAY))} · ${open.length} open permits · reminders run daily at 7:00 (60/30/7-day expiry, 30/7-day COI, 30/14/7-day unexecuted start)</p></div>
+  <a class="btn primary" href="#new">New application</a></div>
+  <div class="kpis">${k.map(x=>`<button type="button" class="kpi ${kcls[x.key]}" data-act="quick" data-arg="${x.key}" id="kpi-${x.key}"><div class="v">${x.v}</div><div class="l">${esc(x.label)}</div></button>`).join("")}</div>
+  <div class="grid dash-grid">
+    <section class="card" aria-labelledby="q-h">
+      <div class="card-head"><h2 id="q-h">Needs attention</h2><p>Sorted by urgency · ${queue.length} permits</p></div>
+      ${queue.length?`<ul class="queue">${queue.map(p=>{const r=reasons(p).sort((a,b)=>({crit:0,warn:1,info:2}[a.level]-{crit:0,warn:1,info:2}[b.level])||a.days-b.days);const top=r[0];
+        const nd=top.date;const dn=nd?daysUntil(nd):0;
+        return `<li><a href="#permit-${p.id}"><div class="when ${top.level}">${nd?`${esc(fmtShort(nd))}<small>${dn===0?"today":dn>0?"in "+dn+"d":(-dn)+"d ago"}</small>`:`<small>now</small>`}</div>
+        <div class="t"><span class="mono">${esc(p.number)}</span>${pill(p.status)}<span class="sub">${esc(p.title)} · ${esc(p.org)}</span></div>
+        <div class="reasons">${r.map(x=>`<span class="pill ${x.level}">${esc(x.label)}</span>`).join("")}</div></a></li>`;}).join("")}</ul>`:`<div class="empty">Nothing needs attention.</div>`}
+    </section>
+    <div class="grid" style="align-content:start">
+      <section class="card" aria-labelledby="p-h">
+        <div class="card-head"><h2 id="p-h">Status pipeline</h2><p>${total} permits this year</p></div>
+        <div class="pipeline">
+          <div class="stagebar" role="img" aria-label="Permits by status">${STATUSES.map((s,i)=>counts[i]?`<span style="flex:${counts[i]};background:${STAGE_COLOR[i]}" title="${esc(s)}: ${counts[i]}"></span>`:"").join("")}${OFFRAMPS.map((s,i)=>offc[i]?`<span style="flex:${offc[i]};background:var(--crit)" title="${s}: ${offc[i]}"></span>`:"").join("")}</div>
+          <ul class="stages">${STATUSES.map((s,i)=>`<li><a href="#permits" data-act="filter-status" data-arg="${esc(s)}"><span class="sw" style="background:${STAGE_COLOR[i]}"></span>${esc(s)}<span class="c">${counts[i]}</span></a></li>`).join("")}
+          ${OFFRAMPS.map((s,i)=>`<li><a href="#permits" data-act="filter-status" data-arg="${s}"><span class="sw" style="background:var(--crit)"></span>${s}<span class="c">${offc[i]}</span></a></li>`).join("")}</ul>
+        </div>
+      </section>
+      <section class="card" aria-labelledby="m-h">
+        <div class="card-head"><h2 id="m-h">Next 30 days</h2><p>${ms.length} milestones</p></div>
+        ${ms.length?`<ul class="ms">${ms.map(m=>`<li><div class="d"><b>${esc(fmtShort(m.d))}</b>${m.n===0?"today":"in "+m.n+"d"}</div><a href="#permit-${m.p.id}"><span class="mono">${esc(m.p.number)}</span> · ${esc(m.label)}<div class="muted" style="font-size:.8rem">${esc(m.p.title)}</div></a></li>`).join("")}</ul>`:`<div class="empty">No milestones in the next 30 days.</div>`}
+      </section>
+    </div>
+  </div>`;
+}
+
+function filteredPermits(){
+  const f=state.pf;const q=f.q.trim().toLowerCase();
+  return permits.filter(p=>{
+    if(f.quick&&!QUICK[f.quick].test(p))return false;
+    if(f.type&&p.type!==f.type)return false;
+    if(f.status&&p.status!==f.status)return false;
+    if(f.loc&&p.location!==f.loc)return false;
+    if(f.from&&(!p.expiration||iso(p.expiration)<f.from))return false;
+    if(f.to&&(!p.expiration||iso(p.expiration)>f.to))return false;
+    if(q&&![p.number,p.name,p.org,p.title,p.location].join(" ").toLowerCase().includes(q))return false;
+    return true;
+  }).sort((a,b)=>b.received-a.received);
+}
+function permitsTable(){
+  const rows=filteredPermits();
+  return `${state.pf.quick?`<div class="row" style="padding:10px 16px;border-bottom:1px solid var(--border)"><span class="chip-x">${esc(QUICK[state.pf.quick].label)}<button type="button" data-act="clear-quick" aria-label="Remove filter">×</button></span></div>`:""}
+  <div class="tablewrap"><table class="permtable"><thead><tr><th>Permit #</th><th>Project / applicant</th><th>Type</th><th>Location</th><th>Status</th><th class="nowrap">Start</th><th class="nowrap">Expires</th></tr></thead><tbody>
+  ${rows.map(p=>`<tr class="rowlink" data-href="#permit-${p.id}"><td class="nowrap"><a class="mono" href="#permit-${p.id}">${esc(p.number)}</a></td><td class="proj">${esc(p.title)}<div class="sub">${esc(p.org)} · ${esc(p.name)}</div></td><td>${esc(p.type)}</td><td>${esc(p.location)}</td><td>${pill(p.status)}</td><td class="nowrap num">${esc(iso(p.start))}</td><td class="nowrap num">${esc(iso(p.expiration))}</td></tr>`).join("")}
+  ${rows.length?"":`<tr><td colspan="7" class="muted">No permits match these filters.</td></tr>`}
+  </tbody></table></div><div class="muted" style="padding:10px 16px;font-size:.8rem">${rows.length} of ${permits.length} permits</div>`;
+}
+function viewPermits(){
+  const f=state.pf;const locs=[...new Set(permits.map(p=>p.location))].sort();
+  return `<div class="page-head"><div><h1>Permits</h1><p>All records in the <span class="mono">Permits</span> list. Click a row to open it.</p></div><a class="btn primary" href="#new">New application</a></div>
+  <section class="card">
+    <div class="filters">
+      <div class="field"><label for="pf-q">Search</label><input type="search" id="pf-q" placeholder="Number, applicant, project, location" value="${esc(f.q)}"></div>
+      <div class="field"><label for="pf-type">Type</label><select id="pf-type"><option value="">All types</option>${PERMIT_TYPES.map(t=>`<option ${f.type===t.title?"selected":""}>${esc(t.title)}</option>`).join("")}</select></div>
+      <div class="field"><label for="pf-status">Status</label><select id="pf-status"><option value="">All statuses</option>${STATUSES.concat(OFFRAMPS).map(s=>`<option ${f.status===s?"selected":""}>${esc(s)}</option>`).join("")}</select></div>
+      <div class="field"><label for="pf-loc">Location</label><select id="pf-loc"><option value="">All locations</option>${locs.map(l=>`<option ${f.loc===l?"selected":""}>${esc(l)}</option>`).join("")}</select></div>
+      <div class="field"><label for="pf-from">Expires from</label><input type="date" id="pf-from" value="${esc(f.from)}"></div>
+      <div class="field"><label for="pf-to">Expires to</label><input type="date" id="pf-to" value="${esc(f.to)}"></div>
+    </div>
+    <div id="permits-results">${permitsTable()}</div>
+  </section>`;
+}
+
+/* ---------- permit record ---------- */
+function stepper(p){
+  const si=statusIdx(p.status);const off=OFFRAMPS.includes(p.status);
+  let reached=-1;if(off){reached=p.conditions.length?2:1;}
+  return `<ol class="stepper" aria-label="Lifecycle">${STATUSES.map((s,i)=>{
+    let c="";if(off){c=i<=reached?"done":"";} else {c=i<si?"done":(i===si?"cur":"");}
+    if(p.status==="Closed"&&i===si)c="done";
+    return `<li class="${c}" ${i===si?'aria-current="step"':""}>${esc(s)}</li>`;}).join("")}
+  ${off?`<li class="off cur" aria-current="step">${esc(p.status)}</li>`:""}</ol>`;
+}
+function primaryActions(p){
+  const s=p.status;const a=[];
+  const coiWhy=!p.coiReceived?"COI must be on file before the Superintendent can execute":"";
+  if(s==="Received")a.push(btn("start-review","Start review",{cls:"primary"}));
+  if(s==="Under Review")a.push(btn("suggest","Suggest conditions"));
+  if(s==="Under Review")a.push(btn("gen-draft","Generate draft permit",{cls:"primary",disabled:!p.conditions.some(c=>c.included),why:"Add or suggest conditions first"}));
+  if(s==="Draft Permit"){a.push(btn("gen-draft",`Regenerate draft (v${p.draftVersion+1})`));a.push(btn("send-sig","Send for signature",{cls:"primary"}));}
+  if(s==="Draft Permit"||s==="Out for Permittee Signature"||s.startsWith("Out for Sup")||s==="Executed"||s==="Active"||s==="Under Review")if(p.draftVersion)a.push(btn("preview","View draft v"+p.draftVersion));
+  if(s==="Out for Permittee Signature")a.push(btn("permittee-signed","Record permittee signed",{cls:"primary"}));
+  if(s==="Out for Superintendent Signature")a.push(btn("sup-sign","Superintendent signs",{cls:"primary",disabled:!p.coiReceived,why:coiWhy}));
+  if(s==="Executed")a.push(btn("begin-compliance","Begin compliance monitoring",{cls:"primary"}));
+  if(s==="Active")a.push(btn("close","Close permit",{cls:"primary"}));
+  if(statusIdx(s)>=0&&statusIdx(s)<5){a.push(btn("withdraw","Withdraw"));a.push(btn("deny","Deny",{cls:"danger"}));}
+  return a.join("");
+}
+function confirmBox(p){
+  const c=state.confirm;if(!c)return"";
+  const open=p.compliance.filter(x=>!x.completed).length;
+  if(c==="close")return `<div class="confirm" role="alert"><div class="grow"><b>Close ${esc(p.number)}?</b> The folder moves to <span class="mono">Closed Projects</span> and the record becomes read-only.${open?` <b>${open} compliance item(s) are still open.</b>`:""}</div><button class="btn primary" type="button" data-act="close-yes">Close permit</button><button class="btn" type="button" data-act="confirm-no">Cancel</button></div>`;
+  if(c==="withdraw"||c==="deny")return `<div class="confirm crit" role="alert"><div class="grow field"><label for="offramp-reason"><b>${c==="deny"?"Deny":"Withdraw"} ${esc(p.number)}</b> — reason (saved to the audit trail)</label><input type="text" id="offramp-reason" placeholder="${c==="deny"?"e.g. Activity not consistent with management plan":"e.g. Applicant withdrew by email"}"></div><button class="btn danger" type="button" data-act="offramp-yes" data-arg="${c}">${c==="deny"?"Deny permit":"Withdraw permit"}</button><button class="btn" type="button" data-act="confirm-no">Cancel</button></div>`;
+  return"";
+}
+function viewRecord(p){
+  if(!p)return `<div class="card card-pad">Permit not found. <a href="#permits">Back to permits</a></div>`;
+  const tabs=[["details","Details"],["conditions","Conditions",p.conditions.filter(c=>c.included).length],["documents","Documents",p.docs.length],["signatures","Signatures"],["compliance","Compliance items",p.compliance.length],["audit","Audit trail",p.audit.length]];
+  const roleHint={coord:"Coordinator: you can move the permit through every step except the Superintendent signature and completing compliance items.",comp:"Compliance staff: you can complete compliance items. Other actions are read-only.",appr:"Approving official: you can sign permits that are out for Superintendent signature. Other actions are read-only."}[state.role];
+  return `<p style="margin:0 0 10px"><a href="#permits">← Permits</a></p>
+  <section class="card">
+    <div class="rec-head">
+      <div class="rec-title"><span class="mono">${esc(p.number)}</span>${pill(p.status)}<span class="tag">${esc(p.type)}</span></div>
+      <h1 style="margin-top:6px">${esc(p.title)}</h1>
+      <div class="rec-sub">${esc(p.org)} · ${esc(p.name)} · ${esc(p.location)}</div>
+      ${reasons(p).length?`<div class="chips mt8">${reasons(p).map(x=>`<span class="pill ${x.level}">${esc(x.label)}</span>`).join("")}</div>`:""}
+      ${stepper(p)}
+    </div>
+    ${isClosed(p)?`<div class="actions"><span class="muted">${esc(p.status)} on ${esc(fmt(p.closedDate))}. Record is read-only.</span></div>`:`<div class="actions">${primaryActions(p)}<span class="hint">${esc(roleHint)}</span></div>`}
+    ${confirmBox(p)}
+  </section>
+  <div class="tabs" role="tablist" aria-label="Permit sections">${tabs.map(([k,l,n])=>`<button type="button" role="tab" id="tab-${k}" aria-selected="${state.tab===k}" aria-controls="panel" data-act="tab" data-arg="${k}">${l}${n!=null?`<span class="count">${n}</span>`:""}</button>`).join("")}</div>
+  <div class="tabpanel" id="panel" role="tabpanel" aria-labelledby="tab-${state.tab}">${({details:tabDetails,conditions:tabConditions,documents:tabDocs,signatures:tabSigs,compliance:tabCompliance,audit:tabAudit})[state.tab](p)}</div>`;
+}
+function tabDetails(p){
+  const kv=(k,v)=>`<div><dt>${k}</dt><dd>${v}</dd></div>`;
+  const coiBlock=isClosed(p)?"":`<div class="card card-pad mt16"><h3>Certificate of insurance</h3>
+    <p class="muted" style="margin:4px 0 12px;font-size:.86rem">${p.coiReceived?`On file, expires <b class="num">${esc(iso(p.coiExp))}</b> (${daysUntil(p.coiExp)>=0?"in "+daysUntil(p.coiExp)+" days":"expired"}). Upload a replacement to update the expiry.`:"No COI on file. Required before the Superintendent can execute the permit."}</p>
+    <div class="row"><div class="field"><label for="coi-exp">COI expiration date</label><input type="date" id="coi-exp" value="${esc(iso(p.coiExp||addDays(TODAY,365)))}"></div><div style="align-self:end">${btn("coi",p.coiReceived?"Replace COI":"Mark COI received")}</div></div></div>`;
+  return `<div class="card card-pad"><dl class="kv">
+    ${kv("Applicant",esc(p.name))}${kv("Organization",esc(p.org))}${kv("Email",esc(p.email))}${kv("Phone",`<span class="num">${esc(p.phone)}</span>`)}
+    ${kv("Permit type",esc(p.type))}${kv("Location",esc(p.location))}
+    ${kv("Received",`<span class="num">${esc(iso(p.received))}</span>`)}${kv("Proposed start",`<span class="num">${esc(iso(p.start))}</span>`)}${kv("Proposed end",`<span class="num">${esc(iso(p.end))}</span>`)}${kv("Permit expiration",`<span class="num">${esc(iso(p.expiration))}</span>`)}
+    ${kv("Coordinator",esc(p.coordinator))}${kv("Superintendent",esc(p.superintendent))}
+    ${kv("COI",p.coiReceived?`Yes · exp <span class="num">${esc(iso(p.coiExp))}</span>`:"Not received")}${kv("Compliance complete",p.complianceComplete?"Yes":"No")}
+    <div style="grid-column:1/-1"><dt>Project description</dt><dd>${esc(p.desc)}</dd></div>
+    <div style="grid-column:1/-1"><dt>Impacts</dt><dd>${p.impacts.map(i=>`<span class="tag">${esc(i)}</span>`).join("")||"None"}</dd></div>
+  </dl></div>${coiBlock}`;
+}
+function condEditable(p){return statusIdx(p.status)>=0&&statusIdx(p.status)<=2;}
+function tabConditions(p){
+  const ed=condEditable(p);
+  const run=state.suggestRun&&state.suggestRun.id===p.id?state.suggestRun:null;
+  const avail=LIBRARY.filter(c=>c.active&&!p.conditions.some(x=>x.code===c.code));
+  const list=p.conditions.slice().sort((a,b)=>a.sort-b.sort);
+  return `${!ed&&!isClosed(p)?`<div class="notice mb16">Conditions are locked once the permit is sent for signature. To change them, the real app would create a new draft version and restart signatures.</div>`:""}
+  ${p.condDirty&&p.status==="Draft Permit"?`<div class="notice warn mb16"><b>Conditions changed since DraftPermit_v${p.draftVersion}.</b>&nbsp;Regenerate the draft before sending for signature.</div>`:""}
+  ${run?`<div class="notice good mb16"><div><b>Rule ran for ${esc(p.type)} with impacts: ${esc(p.impacts.join(", ")||"none")}.</b> ${run.added} new condition(s) added, ${run.kept} already on the permit (staff edits kept). Each condition below shows why it was suggested.</div></div>`:""}
+  <section class="card">
+    <div class="card-head"><h2>Permit conditions</h2><div class="row">${ed?btn("suggest","Suggest conditions",{cls:p.conditions.length?"":"primary"}):""}</div></div>
+    ${list.length?list.map(c=>{const editing=state.editCond===c.code;
+      return `<div class="cond ${c.included?"":"excluded"}">
+      <input type="checkbox" id="inc-${c.code}" data-change="toggle-cond" data-arg="${c.code}" ${c.included?"checked":""} ${ed&&can("toggle-cond").ok?"":"disabled"} aria-label="Include ${esc(c.code)} in permit">
+      <div><div class="ctitle"><span class="mono">${esc(c.code)}</span><b>${esc(c.title)}</b><span class="tag">${esc(c.category)}</span>${c.source==="Added by staff"?'<span class="pill accent plain">Added by staff</span>':""}</div>
+      <div class="why">${c.why.startsWith("Triggered")?`<b>${esc(c.why)}</b>`:esc(c.why)}</div>
+      ${editing?`<div class="field mt8"><label for="ct-${c.code}">Condition text (snapshot for this permit only — library unchanged)</label><textarea id="ct-${c.code}">${esc(c.text)}</textarea><div class="row mt8"><button type="button" class="btn small primary" data-act="save-cond" data-arg="${c.code}">Save text</button><button type="button" class="btn small" data-act="cancel-cond">Cancel</button></div></div>`:`<div class="ctext">${hlPlaceholders(c.text)}</div>`}
+      </div>
+      ${ed&&!editing?`<div class="tools">${can("edit-cond").ok?`<button type="button" class="btn link" data-act="edit-cond" data-arg="${c.code}">Edit text</button>${c.source==="Added by staff"?`<button type="button" class="btn link" data-act="remove-cond" data-arg="${c.code}">Remove</button>`:""}`:""}</div>`:""}
+    </div>`;}).join(""):`<div class="empty">No conditions yet. ${ed?"Click <b>Suggest conditions</b> to run the library rule against this permit's type and impacts.":""}</div>`}
+    ${ed&&can("add-cond").ok?`<div class="actions"><div class="field" style="flex:1 1 260px"><label for="add-cond-sel">Add from library</label><select id="add-cond-sel">${avail.map(c=>`<option value="${c.code}">${esc(c.code)} — ${esc(c.title)}</option>`).join("")}</select></div><div style="align-self:end"><button type="button" class="btn" data-act="add-cond" ${avail.length?"":"disabled"}>Add condition</button></div></div>`:""}
+  </section>`;
+}
+function pathHTML(p){return `<span>Permit Records</span><span class="sep">/</span><span class="hl">${folderTop(p)}</span><span class="sep">/</span><span>${esc(folderName(p))}</span>`;}
+function tabDocs(p){
+  return `<section class="card"><div class="card-head"><h2>Permit folder</h2><p>Library <span class="mono">PermitRecords</span></p></div>
+  <div class="card-pad"><div class="path" id="folder-path">${pathHTML(p)}</div>
+  <p class="muted" style="font-size:.8rem;margin:8px 0 0">FolderPath: <span class="mono">${esc(SITE)}/${esc(folderTop(p))}/${esc(folderName(p))}</span></p></div>
+  <div class="tablewrap"><table><thead><tr><th>File name</th><th>DocType</th><th>PermitNumber</th><th class="nowrap">Added</th></tr></thead><tbody>
+  ${p.docs.slice().sort((a,b)=>b.added-a.added).map(d=>`<tr><td class="mono nowrap">${esc(d.name)}</td><td>${esc(d.docType)}</td><td class="mono nowrap">${esc(p.number)}</td><td class="nowrap num">${esc(fmtTime(d.added))}</td></tr>`).join("")}
+  </tbody></table></div></section>
+  <p class="muted" style="font-size:.8rem">Files are named <span class="mono">{PermitNumber}_{DocType}[_{qualifier}].{ext}</span> by the flows; staff never rename by hand.</p>`;
+}
+function tabSigs(p){
+  const si=statusIdx(p.status);
+  const st1=p.permitteeSigned?["good",`Signed ${fmt(p.permitteeSigned)}`]:(si===3?["warn",`Waiting since ${fmt(p.sigSent)} (${-daysUntil(p.sigSent)}d)`]:["",si<3?"Not sent":"—"]);
+  const st2=p.supSigned?["good",`Signed ${fmt(p.supSigned)}`]:(si===4?["warn",`Waiting since ${fmt(p.permitteeSigned)}`]:["",si<4?"Not started":"—"]);
+  return `<section class="card"><div class="card-head"><h2>Signature routing</h2><p>${p.signatureId?`Request <span class="mono">${esc(p.signatureId)}</span>`:"No signature request yet"}</p></div>
+  <div class="sig"><div class="n ${p.permitteeSigned?"ok":""}">1</div><div><b>Permittee</b><div class="muted" style="font-size:.85rem">${esc(p.name)} · ${esc(p.email)}</div></div><span class="pill ${st1[0]}">${esc(st1[1])}</span></div>
+  <div class="sig"><div class="n ${p.supSigned?"ok":""}">2</div><div><b>Superintendent</b><div class="muted" style="font-size:.85rem">${esc(p.superintendent)} · routed only after the permittee signs</div></div><span class="pill ${st2[0]}">${esc(st2[1])}</span></div>
+  ${si===3||si===4?`<div class="actions">${si===3?btn("permittee-signed","Record permittee signed",{cls:"primary"}):btn("sup-sign","Superintendent signs",{cls:"primary",disabled:!p.coiReceived,why:"COI must be on file before execution"})}${si===4&&!p.coiReceived?'<span class="hint">COI must be on file before the Superintendent can sign. <button type="button" class="btn link" data-act="tab" data-arg="details">Record COI on Details</button></span>':""}</div>`:""}
+  </section>`;
+}
+function tabCompliance(p){
+  if(!p.compliance.length)return `<div class="card empty">Compliance items are created when the permit enters <b>Active</b>.</div>`;
+  const done=p.compliance.filter(c=>c.completed).length;
+  return `<section class="card"><div class="card-head"><h2>Compliance items</h2><p>${done} of ${p.compliance.length} complete${p.complianceComplete?" · ComplianceComplete = Yes":""}</p></div>
+  ${p.compliance.map((c,i)=>{const d=daysUntil(c.due);const lv=c.completed?"good":(d<0?"crit":d<=7?"warn":"");
+    return `<div class="ci"><span class="pill ${lv}">${c.completed?"Done":d<0?"Overdue":"Open"}</span><div><b>${esc(c.title)}</b><div class="muted num" style="font-size:.82rem">Due ${esc(iso(c.due))} · ${esc(c.assigned)}${c.completed?` · completed ${esc(iso(c.completedDate))}`:""}</div></div>
+    <div>${c.completed||isClosed(p)?"":btn("complete-item","Mark complete",{arg:i,cls:"small"})}</div></div>`;}).join("")}
+  </section>`;
+}
+function tabAudit(p){
+  return `<section class="card"><div class="card-head"><h2>Audit trail</h2><p><span class="mono">AuditLog</span> · written by flows, read-only to users</p></div>
+  <ul class="audit">${p.audit.slice().sort((a,b)=>b.time-a.time).map(e=>`<li><time>${esc(fmtTime(e.time))}</time><div><span class="pill plain ${e.type==="Status Changed"?"accent":e.type==="Signed"?"good":e.type==="Moved to Closed"?"warn":""}">${esc(e.type)}</span> ${esc(e.detail)}<div class="actor">${esc(e.actor)}</div></div></li>`).join("")}</ul></section>`;
+}
+
+/* ---------- draft permit preview (modal) ---------- */
+function openPreview(p){
+  const conds=p.conditions.filter(c=>c.included).sort((a,b)=>a.sort-b.sort);
+  const fname=`${p.number}_DraftPermit_v${p.draftVersion}.docx`;
+  const root=document.getElementById("modal-root");
+  root.innerHTML=`<div class="scrim" data-act="close-modal"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="dp-h" data-stop>
+  <div class="card-head"><div><h2 id="dp-h">Draft permit preview</h2><p class="mono">${esc(fname)}</p></div><button type="button" class="btn" data-act="close-modal" id="modal-close">Close</button></div>
+  <div class="card-pad" style="padding-bottom:0"><div class="notice">Generated from <span class="mono">&nbsp;${esc(typeOf(p.type).template)}&nbsp;</span> and saved to ${pathHTML(p).replace(/<[^>]+>/g," ").replace(/\s+/g," ")}.</div></div>
+  <article class="docpaper">
+    <h2>Special Use Permit</h2>
+    <div class="center">${esc(p.type)} · <span class="mono">${esc(p.number)}</span> · DRAFT v${p.draftVersion}</div>
+    <table><tbody>
+      <tr><th>Permittee</th><td>${esc(p.name)}, ${esc(p.org)}</td></tr>
+      <tr><th>Project</th><td>${esc(p.title)}</td></tr>
+      <tr><th>Location</th><td>${esc(p.location)}</td></tr>
+      <tr><th>Authorized period</th><td class="num">${esc(fmt(p.start))} – ${esc(fmt(p.end))}</td></tr>
+      <tr><th>Permit expires</th><td class="num">${esc(fmt(p.expiration))}</td></tr>
+      <tr><th>Description</th><td>${esc(p.desc)}</td></tr>
+    </tbody></table>
+    <h3>Conditions</h3>
+    <p style="font-size:.85rem">The permittee agrees to the following ${conds.length} conditions:</p>
+    <ol>${conds.map(c=>`<li><div class="cat">${esc(c.category)} · ${esc(c.code)}</div>${hlPlaceholders(c.text)}</li>`).join("")}</ol>
+    <div class="sigline"><div>Permittee signature / date</div><div>Superintendent signature / date</div></div>
+  </article></div></div>`;
+  document.getElementById("modal-close").focus();
+}
+function closeModal(){document.getElementById("modal-root").innerHTML="";}
+
+/* ---------- new application ---------- */
+function viewNew(){
+  const r=state.newResult;
+  if(r){const p=byId(r);const s=p.conditions;
+    return `<div class="page-head"><div><h1>Application submitted</h1><p>This is what the intake flow produces when a Microsoft Forms response arrives.</p></div></div>
+    <div class="two"><section class="card card-pad">
+      <div class="lbl">Permit number (next in sequence for ${p.received.getFullYear()})</div>
+      <div class="mono" style="font-size:1.5rem;font-weight:500">${esc(p.number)}</div>
+      <div class="lbl mt16">Folder created</div><div class="path mt8">${pathHTML(p)}</div>
+      <div class="lbl mt16">Files</div><div class="mono" style="font-size:.85rem">${p.docs.map(d=>esc(d.name)).join("<br>")}</div>
+      <div class="lbl mt16">Notifications</div><div style="font-size:.88rem">Acknowledgement emailed to <b>${esc(p.email)}</b>; coordinator ${esc(p.coordinator)} notified.</div>
+      <div class="row mt16"><a class="btn primary" href="#permit-${p.id}">Open record</a><button type="button" class="btn" data-act="new-again">Enter another</button></div>
+    </section>
+    <section class="card"><div class="card-head"><h2>Auto-suggested conditions</h2><p>${s.length} from the library rule</p></div>
+      ${s.map(c=>`<div class="cond"><span></span><div><div class="ctitle"><span class="mono">${esc(c.code)}</span><b>${esc(c.title)}</b></div><div class="why">${c.why.startsWith("Triggered")?`<b>${esc(c.why)}</b>`:esc(c.why)}</div></div></div>`).join("")}
+    </section></div>`;}
+  const v=state.lastNew||{};
+  const f=(id,label,type,req,extra)=>`<div class="field ${extra||""}"><label for="${id}">${label}${req?' <span aria-hidden="true">*</span>':""}</label><input type="${type}" id="${id}" name="${id}" ${req?"required":""} value="${esc(v[id]||"")}"><span class="err" id="${id}-err"></span></div>`;
+  return `<div class="page-head"><div><h1>New application</h1><p>Intake form — the same fields the public Microsoft Forms application collects. Coordinators can also enter phoned-in or paper applications here.</p></div></div>
+  <form id="new-form" class="card card-pad" novalidate>
+    <div class="form-grid">
+      <div class="field full"><label for="f-type">Permit type <span aria-hidden="true">*</span></label><select id="f-type" required>${PERMIT_TYPES.map(t=>`<option ${v["f-type"]===t.title?"selected":""}>${esc(t.title)}</option>`).join("")}</select><span class="help">Determines the Word template and default term.</span></div>
+      ${f("f-name","Applicant name","text",true)}${f("f-org","Organization","text",false)}
+      ${f("f-email","Email","email",true)}${f("f-phone","Phone","tel",false)}
+      ${f("f-title","Project title","text",true,"full")}
+      <div class="field full"><label for="f-desc">Project description <span aria-hidden="true">*</span></label><textarea id="f-desc" required>${esc(v["f-desc"]||"")}</textarea><span class="err" id="f-desc-err"></span></div>
+      ${f("f-loc","Location name","text",true,"full")}
+      ${f("f-start","Proposed start","date",true)}${f("f-end","Proposed end","date",true)}
+      <fieldset class="full" style="border:0;padding:0;margin:0"><legend class="lbl" style="margin-bottom:6px">Will the activity involve any of the following? <span class="muted" style="font-weight:400">Check all that apply — these drive which conditions are suggested.</span></legend>
+      <div class="imps">${IMPACTS.map(([n,h],i)=>`<label class="imp" for="imp-${i}"><input type="checkbox" id="imp-${i}" value="${esc(n)}" ${(v.imps||[]).includes(n)?"checked":""}><span>${esc(n)}</span><small>${esc(h)}</small></label>`).join("")}</div></fieldset>
+    </div>
+    <div class="row mt16"><button type="submit" class="btn primary" id="f-submit" ${can("submit-new").ok?"":"disabled"}>Submit application</button><button type="button" class="btn" data-act="fill-sample">Fill with sample</button>${can("submit-new").ok?"":'<span class="lock">Coordinator only</span>'}</div>
+  </form>`;
+}
+
+/* ---------- condition library ---------- */
+function libTable(){
+  const f=state.cf;const q=f.q.trim().toLowerCase();
+  const rows=LIBRARY.filter(c=>(!f.cat||c.category===f.cat)&&(!q||[c.code,c.title,c.text,c.triggers.join(" ")].join(" ").toLowerCase().includes(q))).sort((a,b)=>a.sort-b.sort);
+  const ed=can("lib-active").ok;
+  return `<div class="tablewrap"><table class="libtable"><thead><tr><th>Code</th><th>Condition</th><th>Category</th><th>Trigger impacts</th><th>Applies to types</th><th>Always</th><th>Active</th></tr></thead><tbody>
+  ${rows.map(c=>`<tr><td class="mono nowrap">${esc(c.code)}</td><td class="ctxt"><b>${esc(c.title)}</b><div class="sub">${hlPlaceholders(c.text)}</div></td><td>${esc(c.category)}</td><td>${c.triggers.map(t=>`<span class="tag">${esc(t)}</span>`).join("")||'<span class="muted">—</span>'}</td><td>${c.types.map(t=>`<span class="tag">${esc(t)}</span>`).join("")||'<span class="muted">All types</span>'}</td><td>${c.always?'<span class="pill good">Yes</span>':'<span class="muted">No</span>'}</td>
+  <td><label class="switch"><input type="checkbox" id="act-${c.code}" data-change="lib-active" data-arg="${c.code}" ${c.active?"checked":""} ${ed?"":"disabled"}><span class="sr">Active</span>${c.active?"Yes":"No"}</label></td></tr>`).join("")}
+  </tbody></table></div>`;
+}
+function rtResults(){
+  const res=suggestFor(state.rt.type,state.rt.imp);
+  return `<div class="lbl">${res.length} condition(s) would be suggested</div><ul class="rt-results">${res.map(s=>`<li><span class="mono">${esc(s.lib.code)}</span> ${esc(s.lib.title)}<div class="why">${s.why.startsWith("Triggered")?`<b>${esc(s.why)}</b>`:esc(s.why)}</div></li>`).join("")}</ul>`;
+}
+function viewConditions(){
+  const f=state.cf;
+  return `<div class="page-head"><div><h1>Condition library</h1><p><span class="mono">ConditionLibrary</span> · ${LIBRARY.length} conditions · Rule: Active AND (type matches or "All types") AND (Always include OR a trigger impact matches).</p></div></div>
+  <div class="two">
+  <section class="card">
+    <div class="filters" style="grid-template-columns:2fr 1fr"><div class="field"><label for="cf-q">Search</label><input type="search" id="cf-q" value="${esc(f.q)}" placeholder="Code, title, text, trigger"></div>
+    <div class="field"><label for="cf-cat">Category</label><select id="cf-cat"><option value="">All categories</option>${CATEGORIES.map(c=>`<option ${f.cat===c?"selected":""}>${esc(c)}</option>`).join("")}</select></div></div>
+    <div id="lib-results">${libTable()}</div>
+  </section>
+  <section class="card rtpanel" aria-labelledby="rt-h">
+    <div class="card-head"><h2 id="rt-h">Test the rules</h2><p>Nothing is saved</p></div>
+    <div class="card-pad">
+      <div class="field"><label for="rt-type">Permit type</label><select id="rt-type">${PERMIT_TYPES.map(t=>`<option ${state.rt.type===t.title?"selected":""}>${esc(t.title)}</option>`).join("")}</select></div>
+      <div class="lbl mt16">Impacts</div>
+      <div style="display:grid;gap:4px;margin-top:4px">${IMPACT_NAMES.map((n,i)=>`<label class="switch" for="rt-imp-${i}"><input type="checkbox" id="rt-imp-${i}" data-rt-imp value="${esc(n)}" ${state.rt.imp.includes(n)?"checked":""}>${esc(n)}</label>`).join("")}</div>
+      <div class="mt16" id="rt-results">${rtResults()}</div>
+    </div>
+  </section></div>`;
+}
+
+/* ---------- reports ---------- */
+function archive(){
+  /* deterministic extra closed records so the 12-month charts have realistic volume */
+  let s=20261123;const rnd=()=>(s=(s*1103515245+12345)%2147483648)/2147483648;
+  const out=[];const base={"Special Event":22,"Commercial Filming / Photography":15,"Right-of-Way / Utility":48,"Research / Collection":30,"Construction / Access":41,"Agricultural Use":26};
+  for(let i=0;i<64;i++){const t=PERMIT_TYPES[Math.floor(rnd()*6)].title;const r=addDays(TODAY,-Math.floor(rnd()*360)-3);const days=Math.round(base[t]*(0.7+rnd()*0.6));out.push({type:t,received:r,executed:daysUntil(addDays(r,days))<=0?addDays(r,days):null});}
+  return out;
+}
+const ARCHIVE=archive();
+function svgBarsV(data,o){
+  const W=640,H=250,ml=36,mr=8,mt=18,mb=36;const max=Math.max(1,...data.map(d=>d.v));const step=max<=6?1:max<=12?2:5;const top=Math.ceil(max/step)*step;
+  const iw=W-ml-mr,ih=H-mt-mb,bw=iw/data.length;
+  let g="";for(let y=0;y<=top;y+=step){const yy=mt+ih-(y/top)*ih;g+=`<line class="gl" x1="${ml}" x2="${W-mr}" y1="${yy}" y2="${yy}"/><text x="${ml-6}" y="${yy+4}" text-anchor="end">${y}</text>`;}
+  const bars=data.map((d,i)=>{const h=(d.v/top)*ih;const x=ml+i*bw+bw*0.18;const w=bw*0.64;return `<rect class="${d.cur?"bar2":"bar"}" x="${x.toFixed(1)}" y="${(mt+ih-h).toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" rx="2"><title>${esc(d.label)}: ${d.v}</title></rect>${d.v?`<text class="val" x="${(x+w/2).toFixed(1)}" y="${(mt+ih-h-5).toFixed(1)}" text-anchor="middle">${d.v}</text>`:""}<text x="${(x+w/2).toFixed(1)}" y="${H-mb+16}" text-anchor="middle">${esc(d.label)}</text>${d.sub?`<text x="${(x+w/2).toFixed(1)}" y="${H-mb+30}" text-anchor="middle" style="font-size:10px;fill:var(--muted)">${esc(d.sub)}</text>`:""}`;}).join("");
+  return `<svg class="chart wide" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.label)}">${g}${bars}<line class="axis" x1="${ml}" x2="${W-mr}" y1="${mt+ih}" y2="${mt+ih}"/></svg>`;
+}
+function svgBarsH(data,o){
+  const W=560,row=34,ml=o.ml||220,mr=48,mt=8;const H=mt+data.length*row+8;const max=Math.max(1,...data.map(d=>d.v));
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.label)}">${data.map((d,i)=>{const y=mt+i*row;const w=(d.v/max)*(W-ml-mr);
+    return `<text x="${ml-10}" y="${y+row/2+4}" text-anchor="end">${esc(d.label)}</text><rect x="${ml}" y="${y+7}" width="${Math.max(d.v?2:0,w).toFixed(1)}" height="${row-14}" rx="2" style="fill:${d.color||"var(--chart-1)"}"><title>${esc(d.label)}: ${d.v}${o.unit||""}</title></rect><text class="val" x="${(ml+w+6).toFixed(1)}" y="${y+row/2+4}">${d.v}${o.unit||""}</text>`;}).join("")}
+    <line class="axis" x1="${ml}" x2="${ml}" y1="${mt}" y2="${H-8}"/></svg>`;
+}
+function viewReports(){
+  const all=permits.map(p=>({type:p.type,received:p.received,executed:p.supSigned})).concat(ARCHIVE);
+  const months=[];for(let i=11;i>=0;i--){const d=new Date(TODAY.getFullYear(),TODAY.getMonth()-i,1);months.push(d);}
+  const perMonth=months.map((m,i)=>({label:m.toLocaleDateString("en-US",{month:"short"}),sub:(i===0||m.getMonth()===0)?String(m.getFullYear()):"",cur:i===11,v:all.filter(r=>r.received.getFullYear()===m.getFullYear()&&r.received.getMonth()===m.getMonth()).length}));
+  const avg=PERMIT_TYPES.map(t=>{const ex=all.filter(r=>r.type===t.title&&r.executed);const v=ex.length?Math.round(ex.reduce((a,r)=>a+(r.executed-r.received)/DAY,0)/ex.length):0;return{label:t.title,v,n:ex.length};});
+  const sb=STATUSES.concat(OFFRAMPS).map((s,i)=>({label:s,v:permits.filter(p=>p.status===s).length,color:i<8?STAGE_COLOR[i]:"var(--crit)"}));
+  return `<div class="page-head"><div><h1>Reports</h1><p>Monthly volume and turnaround include ${ARCHIVE.length} archived sample records in addition to the ${permits.length} permits in this mock-up.</p></div></div>
+  <div class="grid">
+    <section class="card"><div class="card-head"><h2>Applications received per month</h2><p>Last 12 months · current month to date shown muted</p></div><div class="chartwrap">${svgBarsV(perMonth,{label:"Applications received per month"})}</div></section>
+    <div class="grid dash-grid" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr))">
+      <section class="card"><div class="card-head"><h2>Average days, received → executed</h2><p>By permit type</p></div><div class="chartwrap">${svgBarsH(avg,{label:"Average days from received to executed by type",unit:" d",ml:230})}</div>
+      <div class="muted" style="padding:0 16px 14px;font-size:.8rem">Based on ${avg.reduce((a,b)=>a+b.n,0)} executed permits.</div></section>
+      <section class="card"><div class="card-head"><h2>Status breakdown</h2><p>Current records</p></div><div class="chartwrap">${svgBarsH(sb,{label:"Permits by status",ml:240})}</div></section>
+    </div>
+  </div>`;
+}
+
+/* ================= router ================= */
+let lastRoute="";
+function render(){
+  const h=(location.hash||"#dashboard").slice(1);
+  let html,nav=h;
+  const m=h.match(/^permit-(\d+)$/);
+  if(m){const id=Number(m[1]);if(lastRoute!==h){state.confirm=null;state.editCond=null;state.suggestRun=null;}html=viewRecord(byId(id));nav="permits";}
+  else if(h==="permits")html=viewPermits();
+  else if(h==="new")html=viewNew();
+  else if(h==="conditions")html=viewConditions();
+  else if(h==="reports")html=viewReports();
+  else{html=viewDashboard();nav="dashboard";}
+  const app=document.getElementById("app");app.innerHTML=html;
+  document.querySelectorAll("[data-nav]").forEach(a=>a.toggleAttribute("aria-current",false));
+  const cur=document.querySelector(`[data-nav="${nav}"]`);if(cur)cur.setAttribute("aria-current","page");
+  if(lastRoute!==h){window.scrollTo(0,0);if(lastRoute)app.focus({preventScroll:true});}
+  lastRoute=h;
+}
+function currentPermit(){const m=(location.hash||"").match(/^#permit-(\d+)$/);return m?byId(Number(m[1])):null;}
+
+/* ================= actions ================= */
+function setStatus(p,to,actor){audit(p,"Status Changed",`${p.status} → ${to}`,null,actor);p.status=to;}
+const ACT={
+  quick(p,arg){state.pf={q:"",type:"",status:"",loc:"",from:"",to:"",quick:arg};location.hash="#permits";},
+  "filter-status"(p,arg){state.pf={q:"",type:"",status:arg,loc:"",from:"",to:"",quick:""};},
+  "clear-quick"(){state.pf.quick="";document.getElementById("permits-results").innerHTML=permitsTable();},
+  tab(p,arg){state.tab=arg;render();const t=document.getElementById("tab-"+arg);if(t)t.focus();},
+  "start-review"(p){setStatus(p,"Under Review");render();toast("Review started","Status change is logged to AuditLog by the 'SUP – Status Change' flow; applicant gets an 'under review' email.");},
+  suggest(p){
+    const sugg=suggestFor(p.type,p.impacts);let added=0,kept=0;
+    sugg.forEach(s=>{const ex=p.conditions.find(c=>c.code===s.lib.code);if(ex){kept++;ex.why=ex.source==="Added by staff"?ex.why:s.why;}else{added++;p.conditions.push({code:s.lib.code,title:s.lib.title,category:s.lib.category,text:s.lib.text,source:"Suggested",included:true,why:s.why,sort:s.lib.sort});}});
+    if(added&&p.draftVersion)p.condDirty=true;
+    state.suggestRun={id:p.id,added,kept};state.tab="conditions";
+    audit(p,"Field Changed",`Suggest conditions: ${added} added, ${kept} already present (rule on type + ${p.impacts.length} impacts)`);
+    render();toast(`${added} condition(s) suggested`,"In Power Apps, 'Suggest conditions' filters ConditionLibrary with the rule and writes rows to PermitConditions (Source = Suggested).");
+  },
+  "edit-cond"(p,arg){state.editCond=arg;render();const t=document.getElementById("ct-"+arg);if(t)t.focus();},
+  "cancel-cond"(){state.editCond=null;render();},
+  "save-cond"(p,arg){const c=p.conditions.find(x=>x.code===arg);const v=document.getElementById("ct-"+arg).value.trim();if(v&&v!==c.text){c.text=v;c.why=c.why.includes("(edited)")?c.why:c.why+" (edited)";if(p.draftVersion)p.condDirty=true;audit(p,"Field Changed",`${arg} text edited for this permit`);toast(`${arg} text saved`,"PermitConditions.ConditionText is a per-permit snapshot; the library wording is unchanged.");}state.editCond=null;render();},
+  "remove-cond"(p,arg){p.conditions=p.conditions.filter(c=>c.code!==arg);if(p.draftVersion)p.condDirty=true;audit(p,"Field Changed",`${arg} removed`);render();toast(`${arg} removed`,"The staff-added PermitConditions row is deleted; the library is unchanged.");},
+  "add-cond"(p){const code=document.getElementById("add-cond-sel").value;const l=LIBRARY.find(c=>c.code===code);if(!l)return;p.conditions.push({code,title:l.title,category:l.category,text:l.text,source:"Added by staff",included:true,why:"Added by staff",sort:l.sort});if(p.draftVersion)p.condDirty=true;audit(p,"Field Changed",`${code} added from library by staff`);render();toast(`${code} added`,"New PermitConditions row with Source = Added by staff.");},
+  "gen-draft"(p){
+    p.draftVersion++;const name=`${p.number}_DraftPermit_v${p.draftVersion}.docx`;const n=p.conditions.filter(c=>c.included).length;
+    addDoc(p,name,"Draft Permit");audit(p,"Document Added",`${name} generated from ${typeOf(p.type).template} with ${n} conditions`,null,"flow: SUP-GenerateDraft");
+    if(p.status!=="Draft Permit")setStatus(p,"Draft Permit","flow: SUP-GenerateDraft");
+    p.condDirty=false;render();openPreview(p);
+    toast(`${name} created`,`Flow 'Generate Draft Permit' fills the Word template's content controls, inserts ${n} numbered conditions, and saves the file to ${folderTop(p)}/${folderName(p)}.`);
+  },
+  preview(p){openPreview(p);},
+  "send-sig"(p){
+    p.sigSent=new Date();p.signatureId="ENV-"+p.number.slice(-4)+"-"+Math.random().toString(36).slice(2,6).toUpperCase();
+    audit(p,"Signature Sent",`DraftPermit_v${p.draftVersion} sent to ${p.email} (request ${p.signatureId})`,null,"flow: SUP-SendForSignature");
+    setStatus(p,"Out for Permittee Signature","flow: SUP-SendForSignature");state.tab="signatures";render();
+    toast("Sent for signature",`Flow creates an e-signature request: ${p.email} signs first, then ${p.superintendent}. SignatureRequestId is stored on the permit.`);
+  },
+  "permittee-signed"(p){p.permitteeSigned=new Date();audit(p,"Signed",`Permittee signed (${p.name})`,null,"flow: SUP-SignatureWebhook");setStatus(p,"Out for Superintendent Signature","flow: SUP-SignatureWebhook");render();
+    toast("Permittee signature recorded","The e-sign webhook flow sets PermitteeSigned and emails the Superintendent that the permit is ready to sign.");},
+  "sup-sign"(p){p.supSigned=new Date();audit(p,"Signed",`Superintendent signed (${p.superintendent})`,null,"flow: SUP-SignatureWebhook");
+    addDoc(p,`${p.number}_Executed.pdf`,"Executed Permit");audit(p,"Document Added",`${p.number}_Executed.pdf saved; copy emailed to permittee`,null,"flow: SUP-SignatureWebhook");
+    setStatus(p,"Executed","flow: SUP-SignatureWebhook");render();
+    toast("Permit executed",`Flow saves ${p.number}_Executed.pdf to the folder, emails the permittee a copy, and starts expiry reminders.`);},
+  "begin-compliance"(p){p.compliance=complianceTemplate(p).map(c=>({...c,due:daysUntil(c.due)<1?addDays(TODAY,7):c.due}));setStatus(p,"Active");state.tab="compliance";render();
+    toast(`${p.compliance.length} compliance items created`,"Rows added to ComplianceItems and assigned to SUP Compliance; due-date reminders come from the daily flow.");},
+  coi(p){const v=document.getElementById("coi-exp").value;if(!v){toast("Enter the COI expiration date","The COIExpiration column drives the 30/7-day reminders.");return;}
+    p.coiReceived=true;p.coiExp=parseISO(v);const name=addDoc(p,`${p.number}_COI_exp${v}.pdf`,"COI");audit(p,"Document Added",name);audit(p,"Field Changed",`COIReceived = Yes; COIExpiration = ${v}`);render();
+    toast("COI recorded",`File saved as ${name}; reminders scheduled at 30 and 7 days before ${v}.`);},
+  "complete-item"(p,arg){const c=p.compliance[Number(arg)];c.completed=true;c.completedDate=TODAY;addDoc(p,`${p.number}_Compliance_${iso(TODAY)}.pdf`,"Compliance Record");audit(p,"Field Changed",`Compliance item completed: ${c.title}`);
+    if(p.compliance.every(x=>x.completed)){p.complianceComplete=true;audit(p,"Field Changed","ComplianceComplete = Yes");}
+    render();toast("Compliance item completed","ComplianceItems row updated with CompletedDate; evidence file saved with the Compliance_{date} name.");},
+  close(){state.confirm="close";render();},
+  withdraw(){state.confirm="withdraw";render();const i=document.getElementById("offramp-reason");if(i)i.focus();},
+  deny(){state.confirm="deny";render();const i=document.getElementById("offramp-reason");if(i)i.focus();},
+  "confirm-no"(){state.confirm=null;render();},
+  "close-yes"(p){p.closedDate=TODAY;setStatus(p,"Closed");audit(p,"Moved to Closed",`Folder moved to Permit Records/Closed Projects/${folderName(p)}`,null,"flow: SUP-Close");state.confirm=null;state.tab="documents";render();
+    toast("Permit closed","Flow 'Close Permit' moves the folder to Closed Projects and updates FolderPath / FolderUrl.");},
+  "offramp-yes"(p,arg){const r=(document.getElementById("offramp-reason").value||"").trim()||"No reason given";const to=arg==="deny"?"Denied":"Withdrawn";p.closedDate=TODAY;
+    audit(p,"Status Changed",`${p.status} → ${to}. Reason: ${r}`);p.status=to;audit(p,"Moved to Closed",`Folder moved to Permit Records/Closed Projects/${folderName(p)}`,null,"flow: SUP-Close");state.confirm=null;state.tab="documents";render();
+    toast(`Permit ${to.toLowerCase()}`,`Applicant notified by email; folder moved to Closed Projects.`);},
+  "close-modal"(){closeModal();},
+  "fill-sample"(){state.lastNew={"f-type":"Special Event","f-name":"Avery Quinlan","f-org":"Maple Hollow Trail Club","f-email":"avery@example.org","f-phone":"555-0199","f-title":"Spring trail-cleanup day & picnic","f-desc":"Volunteer trail cleanup for about 80 people, followed by a picnic with a pop-up tent near the creek. Small trail tread repairs with hand tools.","f-loc":"Willow Creek Picnic Area","f-start":iso(addDays(TODAY,60)),"f-end":iso(addDays(TODAY,60)),imps:["Ground disturbance","Near stream, river or wetland","Structures or temporary facilities","Large group or public event"]};render();},
+  "new-again"(){state.newResult=null;state.lastNew=null;render();}
+};
+const ROLE_GATED=new Set(["start-review","suggest","edit-cond","save-cond","remove-cond","add-cond","gen-draft","send-sig","permittee-signed","sup-sign","begin-compliance","coi","complete-item","close","withdraw","deny","close-yes","offramp-yes"]);
+
+document.addEventListener("click",e=>{
+  const modalInner=e.target.closest("[data-stop]");const el=e.target.closest("[data-act]");
+  if(el&&el.dataset.act==="close-modal"&&modalInner&&!el.closest(".card-head")){return;}
+  if(el){
+    const act=el.dataset.act;if(!ACT[act])return;
+    if(el.tagName==="A"&&act!=="filter-status")e.preventDefault();
+    if(ROLE_GATED.has(act)){const c=can(act==="close-yes"||act==="offramp-yes"?"close":act);if(!c.ok){toast("Not permitted for this role",`Requires: ${c.need}. In the real app the button is hidden and the SharePoint permission blocks the write.`);return;}}
+    const p=currentPermit();ACT[act](p,el.dataset.arg);return;
+  }
+  const tr=e.target.closest("tr[data-href]");if(tr&&!e.target.closest("a")){location.hash=tr.dataset.href;}
+});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&document.getElementById("modal-root").innerHTML)closeModal();});
+document.addEventListener("change",e=>{
+  const t=e.target;
+  if(t.id==="role-select"){state.role=t.value;state.confirm=null;state.editCond=null;render();toast(`Viewing as ${ROLES[state.role]}`,"Role maps to a SharePoint group (SUP Coordinators / SUP Compliance / SUP Approving Officials); the app shows or hides actions per group.");return;}
+  if(t.dataset.change==="toggle-cond"){const p=currentPermit();const c=p.conditions.find(x=>x.code===t.dataset.arg);c.included=t.checked;if(p.draftVersion)p.condDirty=true;audit(p,"Field Changed",`${c.code} ${t.checked?"included":"excluded"}`);render();toast(`${c.code} ${t.checked?"included":"excluded"}`,"PermitConditions.Included updated; only included conditions go into the generated draft.");const n=document.getElementById("inc-"+c.code);if(n)n.focus();return;}
+  if(t.dataset.change==="lib-active"){const c=LIBRARY.find(x=>x.code===t.dataset.arg);c.active=t.checked;document.getElementById("lib-results").innerHTML=libTable();document.getElementById("rt-results").innerHTML=rtResults();const n=document.getElementById("act-"+c.code);if(n)n.focus();toast(`${c.code} ${c.active?"activated":"deactivated"}`,"Inactive conditions are never suggested; existing permits keep their snapshot text.");return;}
+  if(t.id==="rt-type"||t.hasAttribute("data-rt-imp")){state.rt.type=document.getElementById("rt-type").value;state.rt.imp=[...document.querySelectorAll("[data-rt-imp]:checked")].map(x=>x.value);document.getElementById("rt-results").innerHTML=rtResults();return;}
+  const pfMap={"pf-type":"type","pf-status":"status","pf-loc":"loc","pf-from":"from","pf-to":"to"};
+  if(pfMap[t.id]){state.pf[pfMap[t.id]]=t.value;document.getElementById("permits-results").innerHTML=permitsTable();return;}
+  if(t.id==="cf-cat"){state.cf.cat=t.value;document.getElementById("lib-results").innerHTML=libTable();}
+});
+document.addEventListener("input",e=>{
+  const t=e.target;
+  if(t.id==="pf-q"){state.pf.q=t.value;document.getElementById("permits-results").innerHTML=permitsTable();}
+  if(t.id==="cf-q"){state.cf.q=t.value;document.getElementById("lib-results").innerHTML=libTable();}
+});
+document.addEventListener("submit",e=>{
+  e.preventDefault();
+  if(e.target.id!=="new-form")return;
+  if(!can("submit-new").ok){toast("Not permitted for this role","Requires: Coordinator.");return;}
+  const g=id=>document.getElementById(id).value.trim();
+  const req=["f-name","f-email","f-title","f-desc","f-loc","f-start","f-end"];let bad=null;
+  req.forEach(id=>{const er=document.getElementById(id+"-err");const ok=!!g(id)&&(id!=="f-email"||/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(g(id)));if(er)er.textContent=ok?"":(id==="f-email"&&g(id)?"Enter a valid email":"Required");document.getElementById(id).setAttribute("aria-invalid",String(!ok));if(!ok&&!bad)bad=id;});
+  if(!bad&&g("f-end")<g("f-start")){document.getElementById("f-end-err").textContent="End must be on or after start";bad="f-end";}
+  if(bad){document.getElementById(bad).focus();return;}
+  const imps=[...document.querySelectorAll(".imp input:checked")].map(x=>x.value);
+  const yr=TODAY.getFullYear();
+  const seq=Math.max(0,...permits.filter(p=>p.number.startsWith(`SUP-${yr}-`)).map(p=>Number(p.number.slice(-4))))+1;
+  const type=g("f-type");const start=parseISO(g("f-start"));const end=parseISO(g("f-end"));
+  const p=newPermit({number:`SUP-${yr}-${String(seq).padStart(4,"0")}`,type,status:"Received",name:g("f-name"),org:g("f-org"),email:g("f-email"),phone:g("f-phone"),title:g("f-title"),desc:g("f-desc"),location:g("f-loc"),impacts:imps,
+    received:TODAY,start,end,expiration:addDays(start,typeOf(type).term),coiReceived:false,coiExp:null,permitteeSigned:null,supSigned:null,complianceComplete:false,closedDate:null});
+  audit(p,"Created",`Application received. Folder created: Permit Records/Open Projects/${folderName(p)}`,null,"flow: SUP-Intake");
+  addDoc(p,`${p.number}_Application.pdf`,"Application");audit(p,"Document Added",`${p.number}_Application.pdf`,null,"flow: SUP-Intake");
+  seedConditions(p);audit(p,"Field Changed",`${p.conditions.length} conditions auto-suggested`,null,"flow: SUP-Intake");
+  permits.push(p);state.newResult=p.id;state.lastNew=null;render();
+  toast(`${p.number} created`,"Intake flow: next number from Settings.NextSeq, folder created, application PDF saved, conditions suggested, acknowledgement emailed.");
+});
+window.addEventListener("hashchange",()=>{closeModal();render();});
+document.getElementById("role-select").value=state.role;
+render();
+/* test hook for headless checks */
+window.__sup={permits,suggestFor,shortName,folderName,reasons,QUICK,LIBRARY};
+})();
+</script>
+
+</body>
+</html>

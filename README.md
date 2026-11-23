@@ -23,7 +23,7 @@ All documents stay in SharePoint.
 
 | If you want to... | Open this |
 | --- | --- |
-| See what the system will look like | [The clickable preview](https://claude.ai/artifact/SN7CS7UKucuSFbMYWqkggf). It uses made-up permits, so click anything. If the link will not open, ask the owner to share it with you. |
+| See what the system will look like | Download [`prototype/index.html`](prototype/index.html) and double-click it. It opens in your web browser and uses made-up permits, so click anything. The same preview is also [online](https://claude.ai/artifact/SN7CS7UKucuSFbMYWqkggf), if the owner has shared it with you. |
 | Read the full plan, step by step | [`docs/build-guide.md`](docs/build-guide.md) |
 | Hand the work to the person who will build it | Give them this whole folder. The files they need are in `kit/`. |
 
@@ -32,7 +32,7 @@ All documents stay in SharePoint.
 | Folder | In plain words |
 | --- | --- |
 | `docs/` | The step-by-step guide. Start here. |
-| `prototype/` | The clickable preview, as a file. |
+| `prototype/` | The clickable preview. `index.html` is the one to open. |
 | `kit/` | Ready-made pieces for the builder: a setup script, sample permit conditions, sample permits for testing, and instructions for each automation. |
 | `spec/` | Background notes: the list of information the system stores, the Microsoft facts we checked, and an outside expert's review. |
 
