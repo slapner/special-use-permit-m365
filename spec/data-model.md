@@ -1,6 +1,8 @@
-# SUP System — Frozen Data Model (single source of truth)
+# SUP System — Original Data Model (historical)
 
-All companion files, the guide, and the prototype use these names exactly.
+> This was the starting design. It has not been kept up to date. The current names, lists, Settings keys, folder rules and flow IDs are in `docs/build-guide.md` (Phase 1 and Phase 4) and `kit/Provision-SUPSite.ps1`. Where this file disagrees with them, they win.
+
+The first versions of the companion files, the guide and the prototype used these names.
 Internal names have NO spaces (SharePoint internal names are fixed at creation).
 
 ## Site

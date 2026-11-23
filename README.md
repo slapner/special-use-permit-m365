@@ -34,7 +34,8 @@ All documents stay in SharePoint.
 | `docs/` | The step-by-step guide. Start here. |
 | `prototype/` | The clickable preview. `index.html` is the one to open. |
 | `kit/` | Ready-made pieces for the builder: a setup script, sample permit conditions, sample permits for testing, and instructions for each automation. |
-| `spec/` | Background notes: the list of information the system stores, the Microsoft facts we checked, and an outside expert's review. |
+| `spec/` | Background notes: the Microsoft facts we checked, and the outside experts' reviews. |
+| `scripts/` | Two small helper programs that keep the copies in this folder up to date. You can ignore them. |
 
 ## Three things to know before anyone builds
 
@@ -50,5 +51,9 @@ All documents stay in SharePoint.
 
 ## Status
 
-Work in progress. Some files in `kit/` and `prototype/` are still being brought
-in line with the expert review in `spec/`.
+The guide, the setup kit and the preview are complete and agree with each other.
+Outside experts reviewed the design, the preview, the setup script and the guide,
+and their corrections are included. Their reports are in `spec/`.
+
+What has not happened yet: nobody has tried any of this in a real Microsoft 365
+account. Expect some steps to need small adjustments the first time through.
