@@ -1,29 +1,54 @@
-# Special Use Permit System on Microsoft 365
+# Special Use Permit System
 
-A build kit for replacing an email + Excel + manual-folder permit process with
-SharePoint lists, Power Automate flows, a Power Apps coordinator app and Power BI.
+This folder contains everything needed to replace the current permit process
+(email, an Excel tracker, and folders made by hand) with one system built on
+tools your office already has in Microsoft 365.
 
-> **Untested against a live tenant.** Scripts and flow expressions were written
-> without access to the target Microsoft 365 tenant. Run everything in a test
-> site first.
+You do not need to be technical to read this page.
 
-## Contents
+## What the new system does
 
-| Path | What it is |
+- **Applicants fill in an online form.** Nobody retypes their details into Excel.
+- **Each application gets a permit number and its own folder automatically**, named the same way every time.
+- **The system suggests permit conditions.** For example, if the project involves digging, it suggests the archaeological and soil conditions. Staff still review and decide.
+- **It creates the draft permit** from your Word template.
+- **It sends the permit for signature**: first to the permittee, then to the Superintendent.
+- **It sends reminder emails** before a permit expires, before insurance expires, and when a start date is close but the permit is not signed.
+- **It moves finished permits** to the Closed Projects folder.
+- **It shows a dashboard** of where every permit stands, and keeps a history of who did what and when.
+
+All documents stay in SharePoint.
+
+## Where to start
+
+| If you want to... | Open this |
 | --- | --- |
-| `spec/data-model.md` | Lists, columns, statuses, impact tags and naming convention every other file uses |
-| `spec/facts.md` | Licensing and connector facts checked against Microsoft documentation, with sources |
-| `spec/review-architecture.md` | Independent architecture review and recommended hardening |
-| `kit/Provision-SUPSite.ps1` | PnP PowerShell script that creates the site, lists, library, groups and seed data |
-| `kit/flows.md` | Action-by-action build sheets for the Power Automate flows |
-| `kit/list-views.md`, `kit/formatting/` | SharePoint views and column formatting JSON |
-| `kit/*.csv` | Sample condition library, permit types and fictitious test permits |
-| `prototype/sup-coordinator.html` | Clickable mock-up of the coordinator app with sample data |
+| See what the system will look like | [The clickable preview](https://claude.ai/artifact/SN7CS7UKucuSFbMYWqkggf). It uses made-up permits, so click anything. If the link will not open, ask the owner to share it with you. |
+| Read the full plan, step by step | [`docs/build-guide.md`](docs/build-guide.md) |
+| Hand the work to the person who will build it | Give them this whole folder. The files they need are in `kit/`. |
 
-The step-by-step build guide is `docs/build-guide.md`, a Markdown export of the shared document.
+## What is in each folder
+
+| Folder | In plain words |
+| --- | --- |
+| `docs/` | The step-by-step guide. Start here. |
+| `prototype/` | The clickable preview, as a file. |
+| `kit/` | Ready-made pieces for the builder: a setup script, sample permit conditions, sample permits for testing, and instructions for each automation. |
+| `spec/` | Background notes: the list of information the system stores, the Microsoft facts we checked, and an outside expert's review. |
+
+## Three things to know before anyone builds
+
+1. **This has not been tried in your Microsoft 365 yet.** Everything here was prepared without access to your systems. The builder should try it in a practice site first.
+2. **The preview is a picture of the system, not the system.** Nothing you click in it is saved or sent.
+3. **A few decisions are needed first**, such as which e-signature tool your office is allowed to use. They are listed at the start of the guide, under "Phase 0".
+
+## Who does what
+
+- **Program lead:** makes the decisions in Phase 0 and tags each permit condition with what should trigger it.
+- **IT:** provides a shared account for the system to run under and confirms which licenses the office has.
+- **Builder** (someone comfortable with SharePoint and Power Automate): follows the guide, phase by phase.
 
 ## Status
 
-Work in progress. The data model in `spec/data-model.md` predates the
-architecture review; some of the review's changes are not yet applied to the kit
-and prototype.
+Work in progress. Some files in `kit/` and `prototype/` are still being brought
+in line with the expert review in `spec/`.

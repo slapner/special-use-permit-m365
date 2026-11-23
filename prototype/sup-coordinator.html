@@ -76,13 +76,13 @@ header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;backgroun
 .brand{display:flex;align-items:center;gap:10px;font-weight:600;white-space:nowrap}
 .brand svg{flex:none}
 .brand small{display:block;font-weight:400;color:var(--muted);font-size:.75rem;line-height:1.1}
-@media (max-width:720px){nav.main{order:3;flex-basis:100%} .role{margin-left:auto} .role label{display:none} .brand small{display:none}}
+@media (max-width:720px){nav.main{order:3;flex-basis:100%} .role{margin-left:auto} .role label{display:none} .brand small{display:none} .role select{max-width:150px} .topbar{gap:8px 12px}}
 nav.main{display:flex;gap:2px;overflow-x:auto;flex:1 1 auto;min-width:0;scrollbar-width:none}
 nav.main a{padding:8px 12px;border-radius:6px;text-decoration:none;color:var(--text-2);white-space:nowrap;font-weight:500;font-size:.92rem}
 nav.main a:hover{background:var(--surface-2);color:var(--text)}
 nav.main a[aria-current="page"]{background:var(--accent-soft);color:var(--accent)}
 .role{display:flex;align-items:center;gap:8px;font-size:.85rem;color:var(--muted)}
-.role select{min-width:0}
+.role select{min-width:0;max-width:200px}
 main{padding-top:20px;padding-bottom:64px}
 .page-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:16px}
 .page-head p{margin:4px 0 0;color:var(--muted);font-size:.9rem}
@@ -92,6 +92,7 @@ main{padding-top:20px;padding-bottom:64px}
 .card-head p{margin:0;color:var(--muted);font-size:.82rem}
 .grid{display:grid;gap:16px}
 .dash-grid{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr)}
+.grid>*,.two>*{min-width:0}
 @media (max-width:900px){.dash-grid{grid-template-columns:minmax(0,1fr)}}
 .kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:16px}
 @media (max-width:900px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
@@ -120,7 +121,8 @@ main{padding-top:20px;padding-bottom:64px}
 .queue .when.crit{background:var(--crit-soft);color:var(--crit)} .queue .when.warn{background:var(--warn-soft);color:var(--warn)} .queue .when.info{background:var(--info-soft);color:var(--info)}
 .queue .t{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;min-width:0}
 .queue .t .sub{color:var(--muted);font-size:.85rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-.queue .reasons{display:flex;gap:6px;flex-wrap:wrap}
+.queue .reasons{display:flex;gap:6px;flex-wrap:wrap;min-width:0}
+.reasons .pill,.chips .pill{white-space:normal}
 .pipeline{padding:16px}
 .stagebar{display:flex;height:14px;border-radius:7px;overflow:hidden;background:var(--surface-2);gap:2px}
 .stagebar span{display:block;min-width:4px}
@@ -278,7 +280,7 @@ dl.kv dd{margin:2px 0 0;overflow-wrap:anywhere}
 .rt-results li:first-child{border-top:0}
 .rtpanel{position:sticky;top:80px;max-height:calc(100vh - 96px);overflow:auto}
 @media (max-width:900px){.rtpanel{position:static;max-height:none}}
-.switch{display:inline-flex;align-items:center;gap:6px;font-size:.82rem}
+.switch{position:relative;display:inline-flex;align-items:center;gap:6px;font-size:.82rem}
 .switch input{width:16px;height:16px;accent-color:var(--accent)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 </style>
@@ -315,7 +317,7 @@ dl.kv dd{margin:2px 0 0;overflow-wrap:anywhere}
 (function(){
 "use strict";
 /* ================= constants from spec/data-model.md ================= */
-const STATUSES=["Received","Under Review","Draft Permit","Out for Permittee Signature","Out for Superintendent Signature","Executed","Active – Compliance Monitoring","Closed"];
+const STATUSES=["Received","Under Review","Draft Permit","Out for Permittee Signature","Out for Superintendent Signature","Executed","Active","Closed"];
 const OFFRAMPS=["Withdrawn","Denied"];
 const CLOSED_SET=new Set(["Closed","Withdrawn","Denied"]);
 const IMPACTS=[
@@ -419,8 +421,8 @@ const RAW=[
 ["SUP-2026-0002","Special Event","Closed","Marcus Ellery","Valley Trail Runners Club","m.ellery@example.org","555-0102","Autumn Ridge 10K","Trail running race with about 300 participants and a finish-area tent.","Ridge Overlook Trailhead","Large group or public event;Structures or temporary facilities","2026-06-02","2026-09-26","2026-09-26","2026-09-30",true,"2027-06-01","2026-08-20","2026-08-25",true,"2026-10-02"],
 ["SUP-2026-0003","Commercial Filming / Photography","Withdrawn","Priya Natarajan","Lumen Fieldworks LLC","priya@example.net","555-0103","Waterfall time-lapse shoot","Two-person crew filming time-lapse at the falls with a drone.","Hollow Falls","Commercial filming or photography;Use of drones (UAS)","2026-07-08","2026-08-15","2026-08-17","2026-08-31",false,"","","",false,"2026-07-30"],
 ["SUP-2026-0004","Construction / Access","Denied","Tom Brannigan","Brannigan Excavating","tbrannigan@example.com","555-0104","Private driveway across park land","Construct a gravel driveway crossing a stream to reach adjacent private parcel.","Mill Creek Boundary","Ground disturbance;Near stream, river or wetland;Tree clearing","2026-05-19","2026-09-01","2026-12-31","2027-01-31",false,"","","",false,"2026-08-04"],
-["SUP-2026-0005","Research / Collection","Active – Compliance Monitoring","Dr. Helen Osei","Eastern Highlands University","h.osei@example.edu","555-0105","Stream macroinvertebrate survey","Quarterly kick-net sampling at five stream stations.","Mill Creek","Near stream, river or wetland","2026-02-03","2026-03-15","2027-03-15","2026-12-23",true,"2027-03-31","2026-03-01","2026-03-04",false,""],
-["SUP-2026-0006","Agricultural Use","Active – Compliance Monitoring","Ray Callahan","Callahan Family Farm","ray.callahan@example.com","555-0106","Hay cutting – North Meadow","Annual hay cutting with tractor on 40-acre meadow.","North Meadow","Motorized equipment or vehicles off road","2026-01-20","2026-05-01","2026-10-31","2027-01-22",true,"2026-12-23","2026-04-10","2026-04-12",false,""],
+["SUP-2026-0005","Research / Collection","Active","Dr. Helen Osei","Eastern Highlands University","h.osei@example.edu","555-0105","Stream macroinvertebrate survey","Quarterly kick-net sampling at five stream stations.","Mill Creek","Near stream, river or wetland","2026-02-03","2026-03-15","2027-03-15","2026-12-23",true,"2027-03-31","2026-03-01","2026-03-04",false,""],
+["SUP-2026-0006","Agricultural Use","Active","Ray Callahan","Callahan Family Farm","ray.callahan@example.com","555-0106","Hay cutting – North Meadow","Annual hay cutting with tractor on 40-acre meadow.","North Meadow","Motorized equipment or vehicles off road","2026-01-20","2026-05-01","2026-10-31","2027-01-22",true,"2026-12-23","2026-04-10","2026-04-12",false,""],
 ["SUP-2026-0007","Special Event","Executed","Lena Morales","Harvest Lantern Committee","lena.morales@example.org","555-0107","Winter Lantern Walk","Evening guided lantern walk for about 150 people with temporary lighting.","Visitor Center Loop","Large group or public event;Night activity or lighting;Structures or temporary facilities","2026-09-14","2026-12-12","2026-12-13","2026-12-31",true,"2026-11-30","2026-11-02","2026-11-05",false,""],
 ["SUP-2026-0008","Right-of-Way / Utility","Out for Superintendent Signature","Grant Ivers","Summit Fiber Networks","givers@example.net","555-0108","Fiber conduit bore under Park Road","Directional bore for fiber conduit; two staging pits.","Park Road Mile 3","Utility or right-of-way work;Ground disturbance;Tree clearing","2026-09-30","2027-01-11","2027-02-26","2027-03-31",true,"2027-09-30","2026-11-18","",false,""],
 ["SUP-2026-0009","Commercial Filming / Photography","Out for Permittee Signature","Owen Stratford","Northlight Studio Co.","owen@example.com","555-0109","Outdoor apparel catalog shoot","Six-person crew photographing models on overlooks; one drone.","Ridge Overlook","Commercial filming or photography;Use of drones (UAS)","2026-10-21","2026-12-23","2026-12-24","2026-12-31",true,"2027-10-01","","",false,""],
@@ -428,7 +430,7 @@ const RAW=[
 ["SUP-2026-0011","Research / Collection","Under Review","Samuel Ortiz","Highland Bat Study Group","s.ortiz@example.org","555-0111","Acoustic bat monitoring","Deploy eight acoustic detectors on trees; night visits to retrieve data.","South Ridge Forest","Night activity or lighting","2026-11-09","2027-04-01","2027-09-30","2027-10-31",false,"","","",false,""],
 ["SUP-2026-0012","Special Event","Received","Jordan Pike","Riverside Community Choir","jpike@example.org","555-0112","Spring Concert on the Green","Outdoor choir concert with portable stage and sound system.","Riverside Green","Large group or public event;Structures or temporary facilities;Near stream, river or wetland","2026-11-20","2027-05-15","2027-05-15","2027-05-31",false,"","","",false,""],
 ["SUP-2026-0013","Construction / Access","Under Review","Casey Lindqvist","River Bend Outfitters","casey@example.com","555-0113","Mill Creek Trail footbridge and access","Replace a footbridge and regrade 300 ft of trail approach; remove four hazard trees.","Mill Creek Trail","Ground disturbance;Near stream, river or wetland;Tree clearing;Structures or temporary facilities","2026-11-13","2026-12-21","2027-02-15","2027-03-31",false,"","","",false,""],
-["SUP-2026-0014","Commercial Filming / Photography","Active – Compliance Monitoring","Noor Haddad","Blue Heron Photography","noor@example.net","555-0114","Seasonal wildlife photo workshops","Small-group photography workshops on the marsh boardwalk, Oct–Jan.","Heron Marsh Boardwalk","Commercial filming or photography;Near stream, river or wetland","2026-08-11","2026-10-01","2027-01-31","2027-02-28",true,"2027-08-15","2026-09-18","2026-09-21",false,""]
+["SUP-2026-0014","Commercial Filming / Photography","Active","Noor Haddad","Blue Heron Photography","noor@example.net","555-0114","Seasonal wildlife photo workshops","Small-group photography workshops on the marsh boardwalk, Oct–Jan.","Heron Marsh Boardwalk","Commercial filming or photography;Near stream, river or wetland","2026-08-11","2026-10-01","2027-01-31","2027-02-28",true,"2027-08-15","2026-09-18","2026-09-21",false,""]
 ];
 
 let nextId=1;
@@ -506,7 +508,7 @@ function buildSample(r){
   }
   if(si>=6){
     const ad=addDays(p.supSigned,1);
-    audit(p,"Status Changed","Executed → Active – Compliance Monitoring",at(ad,9,0),C);
+    audit(p,"Status Changed","Executed → Active",at(ad,9,0),C);
     p.compliance=complianceTemplate(p);
     p.compliance.forEach((c,i)=>{
       const overdueDemo=number==="SUP-2026-0014"&&i===1;
@@ -517,7 +519,7 @@ function buildSample(r){
     if(number==="SUP-2026-0014"){p.compliance[1].due=addDays(TODAY,-4);}
   }
   if(status==="Closed"){
-    audit(p,"Status Changed","Active – Compliance Monitoring → Closed",at(p.closedDate,10,0),C);
+    audit(p,"Status Changed","Active → Closed",at(p.closedDate,10,0),C);
     audit(p,"Moved to Closed",`Folder moved to Permit Records/Closed Projects/${folderName(p)}`,at(p.closedDate,10,1),"flow: SUP-Close");
   }
   p.audit.sort((a,b)=>a.time-b.time);
@@ -686,11 +688,11 @@ function primaryActions(p){
   if(s==="Under Review")a.push(btn("suggest","Suggest conditions"));
   if(s==="Under Review")a.push(btn("gen-draft","Generate draft permit",{cls:"primary",disabled:!p.conditions.some(c=>c.included),why:"Add or suggest conditions first"}));
   if(s==="Draft Permit"){a.push(btn("gen-draft",`Regenerate draft (v${p.draftVersion+1})`));a.push(btn("send-sig","Send for signature",{cls:"primary"}));}
-  if(s==="Draft Permit"||s==="Out for Permittee Signature"||s.startsWith("Out for Sup")||s==="Executed"||s==="Active – Compliance Monitoring"||s==="Under Review")if(p.draftVersion)a.push(btn("preview","View draft v"+p.draftVersion));
+  if(s==="Draft Permit"||s==="Out for Permittee Signature"||s.startsWith("Out for Sup")||s==="Executed"||s==="Active"||s==="Under Review")if(p.draftVersion)a.push(btn("preview","View draft v"+p.draftVersion));
   if(s==="Out for Permittee Signature")a.push(btn("permittee-signed","Record permittee signed",{cls:"primary"}));
   if(s==="Out for Superintendent Signature")a.push(btn("sup-sign","Superintendent signs",{cls:"primary",disabled:!p.coiReceived,why:coiWhy}));
   if(s==="Executed")a.push(btn("begin-compliance","Begin compliance monitoring",{cls:"primary"}));
-  if(s==="Active – Compliance Monitoring")a.push(btn("close","Close permit",{cls:"primary"}));
+  if(s==="Active")a.push(btn("close","Close permit",{cls:"primary"}));
   if(statusIdx(s)>=0&&statusIdx(s)<5){a.push(btn("withdraw","Withdraw"));a.push(btn("deny","Deny",{cls:"danger"}));}
   return a.join("");
 }
@@ -779,7 +781,7 @@ function tabSigs(p){
   </section>`;
 }
 function tabCompliance(p){
-  if(!p.compliance.length)return `<div class="card empty">Compliance items are created when the permit enters <b>Active – Compliance Monitoring</b>.</div>`;
+  if(!p.compliance.length)return `<div class="card empty">Compliance items are created when the permit enters <b>Active</b>.</div>`;
   const done=p.compliance.filter(c=>c.completed).length;
   return `<section class="card"><div class="card-head"><h2>Compliance items</h2><p>${done} of ${p.compliance.length} complete${p.complianceComplete?" · ComplianceComplete = Yes":""}</p></div>
   ${p.compliance.map((c,i)=>{const d=daysUntil(c.due);const lv=c.completed?"good":(d<0?"crit":d<=7?"warn":"");
@@ -919,7 +921,7 @@ function viewReports(){
   const sb=STATUSES.concat(OFFRAMPS).map((s,i)=>({label:s,v:permits.filter(p=>p.status===s).length,color:i<8?STAGE_COLOR[i]:"var(--crit)"}));
   return `<div class="page-head"><div><h1>Reports</h1><p>Monthly volume and turnaround include ${ARCHIVE.length} archived sample records in addition to the ${permits.length} permits in this mock-up.</p></div></div>
   <div class="grid">
-    <section class="card"><div class="card-head"><h2>Applications received per month</h2><p>Last 12 months · current month partial (lighter)</p></div><div class="chartwrap">${svgBarsV(perMonth,{label:"Applications received per month"})}</div></section>
+    <section class="card"><div class="card-head"><h2>Applications received per month</h2><p>Last 12 months · current month to date shown muted</p></div><div class="chartwrap">${svgBarsV(perMonth,{label:"Applications received per month"})}</div></section>
     <div class="grid dash-grid" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr))">
       <section class="card"><div class="card-head"><h2>Average days, received → executed</h2><p>By permit type</p></div><div class="chartwrap">${svgBarsH(avg,{label:"Average days from received to executed by type",unit:" d",ml:230})}</div>
       <div class="muted" style="padding:0 16px 14px;font-size:.8rem">Based on ${avg.reduce((a,b)=>a+b.n,0)} executed permits.</div></section>
@@ -989,7 +991,7 @@ const ACT={
     addDoc(p,`${p.number}_Executed.pdf`,"Executed Permit");audit(p,"Document Added",`${p.number}_Executed.pdf saved; copy emailed to permittee`,null,"flow: SUP-SignatureWebhook");
     setStatus(p,"Executed","flow: SUP-SignatureWebhook");render();
     toast("Permit executed",`Flow saves ${p.number}_Executed.pdf to the folder, emails the permittee a copy, and starts expiry reminders.`);},
-  "begin-compliance"(p){p.compliance=complianceTemplate(p).map(c=>({...c,due:daysUntil(c.due)<1?addDays(TODAY,7):c.due}));setStatus(p,"Active – Compliance Monitoring");state.tab="compliance";render();
+  "begin-compliance"(p){p.compliance=complianceTemplate(p).map(c=>({...c,due:daysUntil(c.due)<1?addDays(TODAY,7):c.due}));setStatus(p,"Active");state.tab="compliance";render();
     toast(`${p.compliance.length} compliance items created`,"Rows added to ComplianceItems and assigned to SUP Compliance; due-date reminders come from the daily flow.");},
   coi(p){const v=document.getElementById("coi-exp").value;if(!v){toast("Enter the COI expiration date","The COIExpiration column drives the 30/7-day reminders.");return;}
     p.coiReceived=true;p.coiExp=parseISO(v);const name=addDoc(p,`${p.number}_COI_exp${v}.pdf`,"COI");audit(p,"Document Added",name);audit(p,"Field Changed",`COIReceived = Yes; COIExpiration = ${v}`);render();

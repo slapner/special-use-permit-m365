@@ -54,7 +54,7 @@ Internal names have NO spaces (SharePoint internal names are fixed at creation).
 | SourceSubmissionId | Single line | Forms response id |
 
 ### Status values (in order)
-`Received` → `Under Review` → `Draft Permit` → `Out for Permittee Signature` → `Out for Superintendent Signature` → `Executed` → `Active – Compliance Monitoring` → `Closed`
+`Received` → `Under Review` → `Draft Permit` → `Out for Permittee Signature` → `Out for Superintendent Signature` → `Executed` → `Active` → `Closed`
 Off-ramps: `Withdrawn`, `Denied` (both close and move folder).
 
 ### Impact tags (choice values on Permits.Impacts and ConditionLibrary.TriggerImpacts)
