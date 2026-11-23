@@ -1,6 +1,6 @@
 # Special Use Permit System — Microsoft 365 Build Guide
 
-As of Nov 23, 2026. Exported from the shared build guide; the appendix is still being written.
+Markdown copy of the shared build guide. Edit the shared document, then re-run `scripts/sync-guide.py`.
 
 ## Overview
 
@@ -397,7 +397,7 @@ Append each result to Hits with a reason such as `Permit expires in 30 days`.
 5. **Start date near, not executed.** Same loop over ReminderDaysStartUnexecuted on `ProposedStart`, with the extra filter `SuperintendentSigned eq null`.
 6. *Select* and group Hits by Coordinator email (*Apply to each* over `union()` of the coordinator emails, then *Filter array*).
 7. *Create HTML table* per coordinator (columns: Permit, Applicant, Reason, Date, link to the record) and *Send an email from a shared mailbox* with subject `SUP reminders – @{formatDateTime(utcNow(),'MMM d')}`.
-8. Write one AuditLog row per permit, EventType `Reminder Sent`. Don't write the reminder back onto the permit itself, because that would re-trigger the item-modified flows; the app reads *Last reminded* from AuditLog.
+8. Write one AuditLog row per permit, EventType `Reminder Sent`, and stamp `LastReminderKey` on the permit with the reason and date, so a re-run on the same day sends nothing twice. That update fires the item-modified triggers, which is why Flows 5 and 6 carry trigger conditions and Flow 7 only logs when Status changed.
 
 Time-zone note: `utcNow()` is in UTC, so a 7:00 run in US time zones is already the same calendar day in UTC. If you schedule the flow in the evening, use `convertFromUtc(utcNow(), 'Eastern Standard Time')` (or your zone) instead.
 
@@ -516,7 +516,7 @@ Access is set with five SharePoint groups at the site and list level, so nobody 
 | SUP Viewers (managers, other staff) | Read | Read | Read | Read |
 
 1. Site settings → **Site permissions** → create the groups above and add people (or add Entra security groups to them, so IT manages membership).
-2. On **AuditLog** and **ConditionLibrary**: List settings → **Permissions for this list** → *Stop inheriting* → set the levels in the table.
+2. On **AuditLog**, **ConditionLibrary** and **Settings**: List settings → **Permissions for this list** → *Stop inheriting* → set the levels in the table. Settings holds the permit number counter, so only owners and the service account should edit it.
 3. On **ComplianceItems**: give SUP Compliance *Edit*.
 4. Approving officials sign through the e-signature service or approve in Approvals, so they don't need edit rights on the list. The flows make those updates under the service account.
 
@@ -581,3 +581,62 @@ Build in a test site first, move the current tracker and folders over in one cut
 2. Train coordinators (one hour, using the app), compliance staff and approving officials (15 minutes each on their part).
 3. Run in parallel for two weeks, then set the Excel tracker read-only.
 4. Review after 30 days: reminder accuracy, condition suggestions staff removed most often (adjust tags), and time from received to executed.
+
+## Appendix
+
+### Companion files
+
+Everything below is in the project repository, [special-use-permit-m365](https://github.com/slapner/special-use-permit-m365) (private). None of it has been run against a live tenant; use a test site first.
+
+| File | What it gives the builder |
+| --- | --- |
+| `kit/Provision-SUPSite.ps1` | PnP PowerShell script that builds Phase 1 and Step 8.1 in one run: site, lists, columns, indexes, library, folders, views, groups, permissions and seed data. Needs PowerShell 7.4+, PnP.PowerShell 3.x and your own Entra app registration (`Register-PnPEntraIDAppForInteractiveLogin`). |
+| `kit/flows.md` | Action-by-action build sheets for every flow in Phases 4 and 5, with each expression and the points to verify in your tenant. More detailed than this guide. |
+| `kit/list-views.md`, `kit/formatting/` | The six tracker views and the JSON that colors Status and overdue dates. |
+| `kit/ConditionLibrary-seed.csv` | 22 sample conditions already tagged with triggers, including the archaeological, erosion, buffer and tricolored bat examples. Replace the wording with your own library. |
+| `kit/Permits-sample.csv` | 12 fictitious permits covering every status, for Step 9.1. |
+| `spec/` | The data model, the Microsoft facts checked for this guide, and the independent reviews. |
+
+### Clickable preview
+
+[SUP Coordinator](https://claude.ai/artifact/SN7CS7UKucuSFbMYWqkggf) is a mock-up of the Phase 6 app and the dashboard, using made-up permits. It simulates what the flows do (numbering, condition suggestions with the reason for each, the draft permit, signature order, reminders, the folder move, role-based buttons). Nothing in it is saved or sent, and it is not the Power App itself.
+
+### Options considered
+
+| Choice | Picked | Why not the alternative |
+| --- | --- | --- |
+| Where data lives | SharePoint lists | Dataverse adds a Premium license for every staff user and moves records out of SharePoint. Revisit only if you need per-coordinator record security. |
+| Applicant intake | Microsoft Forms plus email or a file-request link | Forms can't take uploads from outside the organization; Power Pages can, but is Premium and a larger project. |
+| Draft permit | Word template filled by a flow (Premium) with a copy-and-Quick-Parts fallback | The fallback needs one manual paste of conditions per permit. |
+| Signatures | DocuSign or Adobe Acrobat Sign connector | SharePoint eSignature has signing order but no flow actions; Approvals is not an e-signature. |
+| Closed permits | Move the folder, as requested | A status-filtered view is safer because links never break. |
+
+### Hardening to add after the first version works
+
+An independent architecture review recommended these. They are left out of version one to keep the build small; the full reasoning is in `spec/review-architecture.md`.
+
+- [ ] A `SignatureStatus` column (Not sent, In progress, Completed, Declined, Voided, Expired) and the signing official's name and title captured at signing, so declined or expired requests are visible
+- [ ] A `ReminderLog` list with a unique key per reminder, replacing `LastReminderKey`, so reminders missed during an outage are caught up exactly once
+- [ ] A `Counters` list updated with an ETag check, as a second guard on permit numbers beyond the flow's concurrency setting
+- [ ] A `CloseReason` column (Completed, Expired, Withdrawn, Denied, Revoked) and statuses for *Returned Incomplete* and *Expired*
+- [ ] A `Reviews` list if specialists must clear a permit before it is issued
+- [ ] Fill-in tokens in condition text, such as buffer width or clearing dates, completed per permit
+- [ ] A restricted library for sensitive documents such as archaeological site locations
+- [ ] A `FolderMoveState` column and a daily sweep that retries any closed permit whose folder is still under Open Projects
+- [ ] Document IDs turned on, so links to files survive the move to Closed Projects
+
+### Sources
+
+Licensing and connector facts in this guide were checked on November 23, 2026 against these pages; the full table is in `spec/facts.md`.
+
+- [Word Online (Business) connector](https://learn.microsoft.com/en-us/connectors/wordonlinebusiness/): Premium tier, supported content controls, 10 MB limit
+- [File uploads in Microsoft Forms](https://support.microsoft.com/en-us/forms/add-questions-that-allow-for-file-uploads-in-microsoft-forms): uploads only for people inside the organization
+- [SharePoint eSignature overview](https://learn.microsoft.com/en-us/microsoft-365/documentprocessing/esignature-overview) and [pay-as-you-go pricing](https://learn.microsoft.com/en-us/microsoft-365/documentprocessing/syntex-pay-as-you-go-services)
+- [DocuSign connector](https://learn.microsoft.com/en-us/connectors/docusign/), [Adobe Acrobat Sign connector](https://learn.microsoft.com/en-us/connectors/adobesign/) and the [connector availability table](https://learn.microsoft.com/en-us/connectors/connector-reference/connector-reference-powerautomate-connectors) for government clouds
+- [Approvals in Power Automate](https://learn.microsoft.com/en-us/power-automate/get-started-approvals)
+- [SharePoint connector](https://learn.microsoft.com/en-us/connectors/sharepointonline/): Move folder action
+- [PnP PowerShell app registration](https://pnp.github.io/powershell/articles/registerapplication.html)
+- [Power Automate licensing FAQ](https://learn.microsoft.com/en-us/power-platform/admin/power-automate-licensing/faqs)
+- [Power BI license types](https://learn.microsoft.com/en-us/power-bi/fundamentals/service-features-license-type) and [Power BI for US government](https://learn.microsoft.com/en-us/power-bi/enterprise/service-govus-overview)
+
+Not confirmed, so test in your tenant: whether SharePoint eSignature is available in government clouds, whether *Move folder* keeps version history and item IDs, and which government license plans include Power BI Pro.
