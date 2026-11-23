@@ -20,7 +20,7 @@ SharePoint lists, Power Automate flows, a Power Apps coordinator app and Power B
 | `kit/*.csv` | Sample condition library, permit types and fictitious test permits |
 | `prototype/sup-coordinator.html` | Clickable mock-up of the coordinator app with sample data |
 
-The step-by-step build guide lives in a separate shared document.
+The step-by-step build guide is `docs/build-guide.md`, a Markdown export of the shared document.
 
 ## Status
 
