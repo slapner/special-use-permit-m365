@@ -1,0 +1,7 @@
+Title,TemplateFile,DefaultTermDays,Prefix
+Special Event,/sites/SpecialUsePermits/PermitRecords/_Templates/SUP_Template_SpecialEvent.docx,30,EVT
+Commercial Filming / Photography,/sites/SpecialUsePermits/PermitRecords/_Templates/SUP_Template_Filming.docx,60,FLM
+Right-of-Way / Utility,/sites/SpecialUsePermits/PermitRecords/_Templates/SUP_Template_ROW.docx,365,ROW
+Research / Collection,/sites/SpecialUsePermits/PermitRecords/_Templates/SUP_Template_Research.docx,365,RES
+Construction / Access,/sites/SpecialUsePermits/PermitRecords/_Templates/SUP_Template_Construction.docx,180,CON
+Agricultural Use,/sites/SpecialUsePermits/PermitRecords/_Templates/SUP_Template_Agricultural.docx,365,AGR
