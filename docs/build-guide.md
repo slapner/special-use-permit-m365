@@ -459,7 +459,17 @@ Visible: varIsApprover && ThisItem.Status.Value = "Out for Superintendent Signat
 
 where `varIsApprover` is set in `App.OnStart` from membership in the approving-officials group (Office 365 Groups connector or a *Settings* row listing approvers).
 
-### Step 6.4 — Share and pin
+### Step 6.4 — Limits to design around
+
+The clickable preview is smoother than a canvas app on SharePoint can be in five places. Build to these, and tell staff before they see the real app.
+
+- **Signing happens outside the app.** The permittee and the Superintendent sign in the e-signature service's own email or web page. The app only shows the result, and only updates by itself if the chosen service reports back to a flow.
+- **The draft opens in Word.** A canvas app can't show a Word file inside itself, so *Open draft* launches the document in a new browser tab.
+- **Hidden buttons are not security.** Power Apps has no built-in check for SharePoint group membership; keep a small list of approvers and owners that the app reads at start. What a person can really change is set by the Phase 8 permissions, so the app must not offer an action the person's group can't perform.
+- **Counts and searches read only the first 500 rows** (2,000 at most, set in the app's settings) when a formula can't be handed to SharePoint to run. Keep the home-screen counts on indexed columns with simple filters, and move anything heavier to Power BI.
+- **One screen size.** A canvas app is built at a fixed size; a phone layout is a second set of screens. There is no automatic dark mode.
+
+### Step 6.5 — Share and pin
 
 Share the app with the three SharePoint groups' members, then add it as a tab in the program's Teams channel so staff open it where they already work.
 
