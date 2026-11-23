@@ -10,6 +10,8 @@ Count rule, the same as build guide Step 4.1: **13 flows** stay switched on when
 
 With no e-signature service, F4c replaces F4a and F4b, so 12 flows stay on. With SharePoint eSignature, the optional F4d replaces them.
 
+On path A, if you save two extra copies of F4b for declined and voided envelopes (F4b, path A trigger), 15 flows stay on.
+
 | Build order | ID | Flow name to type | Trigger | Delivery stage | Licence |
 | --- | --- | --- | --- | --- | --- |
 | 1 | F7a | `SUP – Write Audit` | Called by the other flows | 1 | Standard |
@@ -104,7 +106,7 @@ Time zone: every local date uses `'Eastern Standard Time'`. Replace it with your
 | Detail | As the row states |
 | Actor | An email address, as the row states |
 
-**Use the service account's connection for app-started flows (F2b, F3, F4a).** After saving F2b, F3 or F4a, open the flow's details page. Under **Run only users** select **Edit**. For SharePoint, and for Word Online, OneDrive and Outlook where used, choose **Use this connection**. Otherwise the flow runs with the coordinator's own rights and cannot write AuditLog or Settings.
+**Use the service account's connection for app-started flows (F2b, F3, F4a).** After saving F2b, F3 or F4a, open the flow's details page. Under **Run only users** select **Edit**. For every connection listed (SharePoint, and Word Online, OneDrive, Outlook, DocuSign or Adobe Acrobat Sign where used), choose **Use this connection**. Otherwise each coordinator is asked to sign in to those services with their own account, rows and files are created in their name, and F4a looks for `SUP-temp` in their own OneDrive.
 
 That setting lets every app user act as the service account through the flow. Keep each flow's only input as the permit ID.
 
@@ -443,7 +445,7 @@ Text F7b-B — Filter array condition:
 - Action 4 finds the newest version whose status differs from the current one. The version just before is not enough, because other edits can add versions that already carry the new status.
 - Two edits saved inside one trigger polling window arrive as one run. Only the net change is logged.
 - When a flow made the change, Actor is the service account. The flow's own audit row carries the human context.
-- *Test in your tenant:* the versions list should be newest first. If `$top` is rejected, remove `&$top=20` from the Uri.
+- *Test in your tenant:* the versions list should be newest first. If the call is rejected, shorten the Uri to end at `/versions`, with no `$select` or `$top`.
 - To log other milestones, copy actions 2 to 6 for `COIReceived`, `PermitteeSigned` or `SuperintendentSigned`, with EventType `Field Changed`.
 
 ## F5 — Close permit and move the folder
@@ -492,6 +494,7 @@ The flow's own update puts `/Closed Projects/` in the folder path, so the flow c
 |  |  | Run after | **Get folder metadata using path Source**: tick only **is successful** |
 | 10 | Terminate → **Terminate Move failed** | Status | Choose **Failed** |
 |  |  | Message | Text `Folder move failed` |
+|  |  | Run after | **Send an email (V2) Move failed**: tick **is successful**, **has failed** and **has timed out** |
 | 11 | Compose → **Compose NewFolderPath** | Inputs | `replace(triggerBody()?['FolderPath'], '/PermitRecords/Open Projects/', '/PermitRecords/Closed Projects/')` |
 |  |  | Run after | **Terminate Move failed**: tick only **is skipped** |
 | 12 | Update item → **Update item Permit** | List Name | Choose **Permits** |
@@ -532,6 +535,7 @@ coalesce(triggerBody()?['ClosedDate'], formatDateTime(convertFromUtc(utcNow(), '
 - **Move worked.** Actions 8 to 10 are skipped. Action 11 runs because action 10 was skipped.
 - **Move failed and the folder is still there.** A file is open in Word, or a folder of that name already exists. Actions 8 to 10 email a person and stop the run as Failed. The permit stays closed with its folder under Open Projects until someone acts.
 - **Move failed because an earlier run already moved the folder.** Action 8 fails, so 9 and 10 are skipped. Actions 11 to 13 then repair the item.
+- **Move failed and the failure email failed too.** Action 10 still stops the run as Failed, so the item is not changed.
 
 Status is re-sent in action 12 so the update cannot blank it.
 
@@ -542,6 +546,7 @@ Status is re-sent in action 12 so the update cannot blank it.
 - *Test in your tenant:* if the designer will not add action 11 below a Terminate, add it as a parallel branch beside action 9. Set its run after to **Get folder metadata using path Source**: **has failed** and **is skipped**.
 - **Verify:** instead of building Folder from the path in action 12, you can use `body('Move_folder')?['{Link}']` if **Move folder** returns it.
 - *Test in your tenant:* note one file's ID and version count, close the permit, then compare. Do not assume item IDs or version history survive the move. Bookmarked folder links break.
+- *Test in your tenant:* close a test permit whose folder holds a `_PermitteeSigned.pdf`, then check the run history of F4c and F9. Neither should start. If F4c starts, add a **Condition** after its action 3 that ends the run unless the permit's status is `Out for Permittee Signature`.
 
 ## F6 — Daily reminders
 
@@ -726,8 +731,14 @@ With today as 2026-11-23, Text F6-B resolves to this:
 
 *Test in your tenant:* set one test permit's Permit Expiration to exactly 30 days out and run the flow. If the permit is missed, the exact-date filter does not match date-only values in your site's time zone. Use one of these instead:
 
-- A date range in each clause: `(PermitExpiration ge 'D' and PermitExpiration lt 'D+1')`. Build `D+1` with `addDays(convertFromUtc(utcNow(), 'Eastern Standard Time'), add(int(trim(item())), 1))`.
+- A date range in each clause. Replace expression F6-A in actions 8 to 10 with expression F6-L below, changing the column name for COI and start dates as before.
 - No date clause in the query. Filter in the flow by comparing `formatDateTime(item()?['PermitExpiration'], 'yyyy-MM-dd')` with the wanted dates.
+
+Expression F6-L — a date range in place of one exact date. Use it instead of F6-A only if the test above fails:
+
+```
+concat('(PermitExpiration ge ''', formatDateTime(addDays(convertFromUtc(utcNow(), 'Eastern Standard Time'), int(trim(item()))), 'yyyy-MM-dd'), ''' and PermitExpiration lt ''', formatDateTime(addDays(convertFromUtc(utcNow(), 'Eastern Standard Time'), add(int(trim(item())), 1)), 'yyyy-MM-dd'), ''')')
+```
 
 ### Optional additions
 
@@ -776,7 +787,7 @@ F8 cannot tell a certificate of insurance from a site plan. It files everything 
 
 - **Trigger:** Office 365 Outlook **When a new email arrives in a shared mailbox (V2)**. Flow name: `SUP – Mailbox Attachments`.
 - **Original Mailbox Address:** the shared mailbox. **Subject Filter:** `SUP-`. **Include Attachments:** Yes. **Only with Attachments:** Yes.
-- The service account needs **Full Access** on the mailbox (build guide Phase 0, Accounts item 3).
+- The service account needs **Full Access** on the mailbox (build guide Phase 0, Accounts item 3). Allow about two hours after IT grants it before the trigger works.
 
 ### Actions
 
@@ -828,7 +839,7 @@ concat(first(body('Get_items_Permit')?['value'])?['PermitNumber'], '_Corresponde
 ### Notes
 
 - An email whose number matches no permit ends at action 4N.1. It stays in the Inbox for a person to file.
-- A subject with fewer than 13 characters after `SUP-` makes action 2 fail. The email stays in the Inbox.
+- *Test in your tenant:* send one email whose subject ends with the permit number. If action 2 fails, change both `triggerOutputs()?['body/subject']` in expression F8-A to `concat(triggerOutputs()?['body/subject'], '             ')` (13 spaces). A short subject then ends at action 4N.1 instead of failing.
 - Action 6.1 skips pictures inside the message, such as signature logos.
 - Two attachments with the same name on the same day clash. The second **Create file** fails and a person files it.
 - *Test in your tenant:* send a test email with one PDF and a logo in the signature. Check that only the PDF is filed. If nothing is filed, look at the attachment's field names in run history.
@@ -931,7 +942,7 @@ Set a sample permit to `Under Review`. With the sample data, every permit gets t
 Build F2b with the app (build guide Phase 6). It is F2a with a different trigger, so the coordinator can run suggestions again at any status.
 
 1. Create a new flow in the solution named exactly `SUPSuggestConditions`.
-2. **Trigger:** **Power Apps (V2)**. Add one Number input named `PermitId`.
+2. **Trigger:** **Power Apps (V2)**, which the current designer may list as **When Power Apps calls a flow (V2)**. Add one Number input named `PermitId`.
 3. Add F2a's actions 1 and 4 to 11. Leave out actions 2 and 3, which belong to the status trigger.
 4. In action 4, set **Id** to Token **PermitId** instead of the expression.
 5. In action 11, set **Actor** to expression F2-B.
@@ -950,6 +961,8 @@ base64ToString(coalesce(triggerOutputs()?['headers']?['x-ms-user-email-encoded']
 
 The app calls `SUPSuggestConditions.Run(varPermit.ID)` (build guide formula 6-I). The flow name has no spaces, because the app calls it by name, and `varPermit.ID` works on any screen, unlike `ThisItem.ID`.
 
+*Test in your tenant:* time F2b with your real library. If a run takes more than about 90 seconds, set **Degree of parallelism** on **Apply to each Condition** to `20` in F2b. The app waits at most two minutes for the answer.
+
 Without the response action, the app refreshes before the new rows exist. To save typing, you can copy each action from F2a with **… → Copy action** and paste it into F2b.
 
 ## F3 — Generate the draft permit
@@ -962,7 +975,7 @@ The only Premium piece is the Word Online (Business) connector. A flow started f
 
 ### Trigger and settings
 
-- **Trigger:** **Power Apps (V2)** with one Number input named `PermitId`. Flow name: exactly `SUPGenerateDraft`.
+- **Trigger:** **Power Apps (V2)**, which the current designer may list as **When Power Apps calls a flow (V2)**, with one Number input named `PermitId`. Flow name: exactly `SUPGenerateDraft`.
 - After saving, set **Run only users** as described under "Rules that apply to every flow".
 - Until the app exists, run it from **Test → Manually** with a permit's ID.
 
@@ -1000,8 +1013,10 @@ If **Permit Expiration** is blank, F3 sets it to Proposed Start plus the permit 
 Expression F3-A — Compose Expiration. It gives the expiration as `yyyy-MM-dd`, or empty text when it cannot be worked out:
 
 ```
-if(not(empty(body('Get_item_Permit')?['PermitExpiration'])), formatDateTime(body('Get_item_Permit')?['PermitExpiration'], 'yyyy-MM-dd'), if(or(empty(body('Get_item_Permit')?['ProposedStart']), empty(body('Get_item_Type')?['DefaultTermDays'])), '', addDays(body('Get_item_Permit')?['ProposedStart'], int(body('Get_item_Type')?['DefaultTermDays']), 'yyyy-MM-dd')))
+if(not(empty(body('Get_item_Permit')?['PermitExpiration'])), formatDateTime(body('Get_item_Permit')?['PermitExpiration'], 'yyyy-MM-dd'), if(or(empty(body('Get_item_Permit')?['ProposedStart']), equals(body('Get_item_Type')?['DefaultTermDays'], null)), '', addDays(body('Get_item_Permit')?['ProposedStart'], int(first(split(string(body('Get_item_Type')?['DefaultTermDays']), '.'))), 'yyyy-MM-dd')))
 ```
+
+This expression, like F3-G in version 2, relies on `if()` evaluating only the branch it picks, because `formatDateTime` and `addDays` fail on a blank date. Microsoft's reference does not say so. The blank-date checks in **Check it works** below, and the blank Proposed End test in version 2, confirm it.
 
 Text F3-B — Filter Query for Word drafts only:
 
@@ -1129,7 +1144,7 @@ One master template is the simplest design. Type-specific wording belongs in the
 | --- | --- | --- | --- |
 | 11 | Select → **Select WordConditions** | From | `body('Get_items_Conditions')?['value']` |
 |  |  | Map | Key and value mode. Key `ConditionCode`: `item()?['Title']`. Key `ConditionText`: `item()?['ConditionText']` |
-| 12 | Populate a Microsoft Word template → **Populate a Microsoft Word template** (default name) | Location | Choose the site |
+| 12 | Populate a Microsoft Word template → **Populate a Microsoft Word template** (default name) | Location | Choose the site. If it is not listed, choose **Enter custom value** and paste the site's full address |
 |  |  | Document Library | Choose **Permit Records** |
 |  |  | File | Browse to `/_Templates/SUP_Template_Master.docx` |
 |  |  | PermitNumber | `body('Get_item_Permit')?['PermitNumber']` |
@@ -1175,7 +1190,7 @@ Notes on version 2:
 - **One template per type instead:** add a **Switch** on `body('Get_item_Permit')?['PermitType']?['Value']` with one case per type. Put one Populate action in each case, renamed `Populate SpecialEvent`, `Populate Filming` and so on. After the Switch, add a Compose named **Compose DraftContent** set to `coalesce(body('Populate_SpecialEvent'), body('Populate_Filming'))`, listing all six. Use `outputs('Compose_DraftContent')` as the file content in action 13.
 - The action fails if a multi-factor sign-in policy applies to the service account. See build guide Phase 0, Accounts item 2.
 - *Test in your tenant:* generate a draft for a permit with no Proposed End. The run should succeed with that field empty.
-- *Test in your tenant:* the new file can take about a minute before later actions can use it. If action 14 fails, add a one-minute **Delay** before it.
+- *Test in your tenant:* the new file can take about a minute before later actions can use it. If action 14 fails, add a **Delay** of 30 seconds before it. Keep it short: a flow that answers the app must respond within two minutes.
 
 ### Check it works
 
@@ -1204,7 +1219,7 @@ The DocuSign and Adobe Acrobat Sign connectors are Standard. The service itself 
 
 ### F4a — trigger and settings
 
-- **Trigger:** **Power Apps (V2)** with one Number input named `PermitId`. Flow name: exactly `SUPSendForSignature`.
+- **Trigger:** **Power Apps (V2)**, which the current designer may list as **When Power Apps calls a flow (V2)**, with one Number input named `PermitId`. Flow name: exactly `SUPSendForSignature`.
 - After saving, set **Run only users** as described under "Rules that apply to every flow".
 - Create a folder named `SUP-temp` in the service account's OneDrive.
 - Each permit needs a Superintendent and an applicant email before it is sent.
@@ -1224,7 +1239,7 @@ The DocuSign and Adobe Acrobat Sign connectors are Standard. The service itself 
 |  |  | Limit Entries to Folder | `outputs('Compose_FolderSiteRel')` |
 | 5 | Condition → **Condition Ready to send** | Left value | Expression F4-B |
 |  |  | Operator and right value | **is equal to** `true` |
-| 5N.1 | Respond to a Power App or flow → **Respond Not sent** | Text output `message` | Text `Not sent. Generate a draft first, or this permit is already out for signature.` |
+| 5N.1 | Respond to a Power App or flow → **Respond Not sent** | Text output `message` | Text `Not sent. The permit needs a draft, an applicant email and a Superintendent, and must not already be out for signature.` |
 | 5N.2 | Terminate → **Terminate Not sent** | Status | Choose **Cancelled** |
 | 6 | Update item → **Update item Pending** | List Name | Choose **Permits** |
 |  |  | Id | `body('Get_item_Permit')?['ID']` |
@@ -1248,14 +1263,14 @@ startswith(FileLeafRef, '@{body('Get_item_Permit')?['PermitNumber']}_DraftPermit
 Expression F4-B — a draft exists and no request is open:
 
 ```
-and(greater(length(body('Get_files_Draft')?['value']), 0), empty(body('Get_item_Permit')?['SignatureRequestId']))
+and(greater(length(body('Get_files_Draft')?['value']), 0), empty(body('Get_item_Permit')?['SignatureRequestId']), not(empty(body('Get_item_Permit')?['ApplicantEmail'])), not(empty(body('Get_item_Permit')?['Superintendent']?['Email'])))
 ```
 
 Notes on the shared actions:
 
 - Action 6 marks the permit before anything is sent. A second press of the button then stops at action 5.
 - If F4a fails after action 6, the permit keeps `PENDING`. Regenerate the draft to clear it, then send again.
-- *Test in your tenant:* run actions 1 to 11 on a test permit and open the PDF from run history. **Convert file** works on files in the account's own OneDrive, not on SharePoint files.
+- *Test in your tenant:* run actions 1 to 11 on a test permit and open the PDF from run history. **Convert file** works on files in the account's own OneDrive, not on SharePoint files. If it fails with "Bad gateway" or "not found", add a **Delay** of 10 seconds between actions 8 and 9.
 - **Alternative (Premium): Word Online (Business) Convert Word Document to PDF.** Earlier versions of this sheet used it. The OneDrive actions above are Standard, so paths A and B need no Premium licence. To use the Premium action, replace actions 8, 9 and 11 with it and set **Compose PdfContent** to its output. F4a is started from the app, so every person who runs it then needs Premium, or the flow needs a Process licence (see F3 "Licensing, stated once").
 - If your service accepts Word files, you can skip the conversion. Set **Compose PdfContent** to `body('Get_file_content')` and end the document name in `.docx`.
 
@@ -1270,7 +1285,8 @@ Add these after action 11. Field labels vary by connector version, so use the la
 | A2 | Compose → **Compose RequestId** | Inputs | Token: the envelope ID from **Create envelope** |
 | A3 | Add documents to an envelope → **Add documents to an envelope** (default name) | Envelope | `outputs('Compose_RequestId')` |
 |  |  | Document name | `concat(body('Get_item_Permit')?['PermitNumber'], '_Executed.pdf')` |
-|  |  | Document content | `outputs('Compose_PdfContent')` |
+|  |  | Document Base64 | `base64(outputs('Compose_PdfContent'))` |
+|  |  | Document type | Text `pdf` |
 | A4 | Add recipient to an envelope (V2) → **Add recipient Permittee** | Envelope | `outputs('Compose_RequestId')` |
 |  |  | Recipient type | Choose the signer type |
 |  |  | Signer name | `body('Get_item_Permit')?['ApplicantName']` |
@@ -1285,6 +1301,8 @@ Add these after action 11. Field labels vary by connector version, so use the la
 
 Then add the closing actions below.
 
+Every DocuSign action has a required **Account ID** field. Choose the same account in each one. In A4 and A5 the name and email fields appear after you choose **Recipient type**.
+
 *Test in your tenant:* ask the DocuSign administrator how signers place their signature. Without signature fields or anchor text in the document, signers place it themselves.
 
 ### Path B — Adobe Acrobat Sign actions
@@ -1298,13 +1316,14 @@ Add these after action 11. Field labels vary by connector version, so use the la
 | B2 | Create an agreement from an uploaded document and send for signature → **Create agreement** | Agreement name | `concat('Special use permit ', body('Get_item_Permit')?['PermitNumber'])` |
 |  |  | Document ID | Token: the document ID from **Upload a document** |
 |  |  | Signature type | Choose the e-signature option |
+|  |  | State | Choose the option that sends the agreement now (in process), not draft |
 |  |  | Participant 1 email, order and role | `body('Get_item_Permit')?['ApplicantEmail']`, order `1`, signer |
 |  |  | Participant 2 email, order and role | `body('Get_item_Permit')?['Superintendent']?['Email']`, order `2`, signer |
 | B3 | Compose → **Compose RequestId** | Inputs | Token: the agreement ID from **Create agreement** |
 
 Then add the closing actions below.
 
-*Test in your tenant:* confirm the action lets you add a second participant with **Order** 2. If it shows only one, set the signing order in an Adobe workflow and use **Create an agreement from a workflow** instead.
+*Test in your tenant:* confirm the action lets you add a second participant with **Order** 2. If it shows only one, set the signing order in an Adobe workflow and use **Create an agreement from a workflow and send for signature** instead.
 
 ### F4a — closing actions for paths A and B
 
@@ -1337,8 +1356,11 @@ base64ToString(coalesce(triggerOutputs()?['headers']?['x-ms-user-email-encoded']
 
 F4b runs when the e-signature service reports a change. It finds the permit by its request ID. Flow name: `SUP – Signature Callback`.
 
-- **Path A trigger:** DocuSign **When an envelope status changes (Connect) (V3)**.
-- **Path B trigger:** Adobe Acrobat Sign **When an agreement workflow is completed successfully**.
+- **Path A trigger:** DocuSign **When an envelope status changes (Connect) (V3)**. Account: the agency account. Connect name: Text `SUP completed`. Envelope event: choose the completed event.
+- This trigger carries one event. For declined and voided requests, either save two copies of F4b with **Envelope event** changed (each needs actions 1 to 8 and its own case), or let the coordinator handle a decline by hand, as on path B.
+- *Test in your tenant:* the trigger **When a Docusign Connect event occurs (Account-level)** accepts several **Trigger events** in one flow. If its dynamic content offers the envelope ID and the envelope status, use it instead and keep a single F4b.
+- Either trigger needs DocuSign Connect switched on for the account. It is off by default.
+- **Path B trigger:** Adobe Acrobat Sign **When an agreement workflow is completed successfully**. Name: Text `SUP completed`. Scope: choose the option that covers every agreement the service account sends. If an events field shows, keep its default. The agreement ID token is the trigger's `agreement.id`.
 - **Verify** the trigger names and the **Get signed PDF** action names (8C.1) in your tenant.
 - If no usable trigger exists, a **Recurrence** every hour that polls the service's status action for each permit with a **Signature Request Id** is a fallback (**verify** the action name, for example Adobe's *Get agreement status*).
 
@@ -1362,6 +1384,7 @@ Case `completed` — both people have signed:
 | # | Action (rename to) | Field | Value |
 | --- | --- | --- | --- |
 | 8C.1 | Path A: Get documents from an envelope. Path B: Get a PDF of a signed agreement → **Get signed PDF** | Envelope or Agreement ID | `outputs('Compose_RequestId')` |
+|  |  | Path A only: Output format | Choose the combined PDF option |
 | 8C.2 | Create file → **Create file Executed** | Folder Path | `outputs('Compose_FolderSiteRel')` |
 |  |  | File Name | `concat(first(body('Get_items_Permit')?['value'])?['PermitNumber'], '_Executed.pdf')` |
 |  |  | File Content | `body('Get_signed_PDF')` |
@@ -1406,7 +1429,7 @@ Clearing the two signature columns matters. While **Signature Request Id** is fi
 
 Between the two signatures, the status should read `Out for Superintendent Signature`. Whether a trigger fires at that moment is not confirmed for either service.
 
-*Test in your tenant:* in a sandbox account, send a test request and have the first signer sign. Watch F4b's run history.
+*Test in your tenant:* send a test request to two test signers and have the first signer sign. Watch F4b's run history. A DocuSign developer sandbox needs the separate **Docusign Demo** connector; with the standard connector, test in the agency's real account.
 
 - **If a run starts,** add a case to **Switch Status** for the status value you see. Give it one **Update item** with **Permittee Signed** `outputs('Compose_Today')` and **Status Value** `Out for Superintendent Signature`. Add an **Audit** row with Detail `Permittee signed`.
 - **Path B option:** a second small flow on **When an agreement is sent to a participant** fires when the Superintendent's turn starts. Give it the same update.
@@ -1430,7 +1453,7 @@ An Approvals response records who approved and when. It is not a legal e-signatu
 4. The applicant signs and replies. F8 files the reply in the permit folder.
 5. The coordinator checks the signed copy. They upload a copy named `{PermitNumber}_DraftPermit_v{n}_PermitteeSigned.pdf` to the permit folder.
 
-The upload starts F4c. Renaming a file already in the folder does not start it, so upload a copy.
+The upload starts F4c. Renaming a file already in the folder does not start it, so upload a copy. Uploading over a file of the same name does not start it either: delete the old signed copy first.
 
 ### F4c — trigger and settings
 
@@ -1442,10 +1465,10 @@ The upload starts F4c. Renaming a file already in the folder does not start it, 
 ```
 
 ```
-@contains(triggerBody()?['{FilenameWithExtension}'], '_DraftPermit_v')
+@and(contains(triggerBody()?['{FilenameWithExtension}'], '_DraftPermit_v'), not(contains(triggerBody()?['{FilenameWithExtension}'], '_Correspondence_')))
 ```
 
-The second row stops a reply that F8 filed from starting the approval before a person has checked it.
+The second row limits the flow to files named by the convention and skips any reply that F8 filed, so the approval cannot start before a person has checked the signed copy.
 
 ### F4c — actions
 
@@ -1501,7 +1524,7 @@ The second row stops a reply that F8 filed from starting the approval before a p
 |  |  | Permittee Signed | `null` |
 | 8N.2 | Send an email (V2) → **Send an email (V2) Rejected** | To | `first(body('Get_items_Permit')?['value'])?['Coordinator']?['Email']` |
 |  |  | Subject | Text `Superintendent rejected @{outputs('Compose_PermitNumber')}` |
-|  |  | Body | `first(body('Start_and_wait_for_an_approval')?['responses'])?['comments']` |
+|  |  | Body | `concat('Superintendent comments: ', coalesce(first(body('Start_and_wait_for_an_approval')?['responses'])?['comments'], '(none)'))` |
 | 8N.3 | Run a Child Flow → **Audit Rejected** | PermitNumber | `outputs('Compose_PermitNumber')` |
 |  |  | PermitId | `first(body('Get_items_Permit')?['value'])?['ID']` |
 |  |  | EventType | Text `Field Changed` |
@@ -1509,7 +1532,7 @@ The second row stops a reply that F8 filed from starting the approval before a p
 |  |  | Actor | `first(body('Start_and_wait_for_an_approval')?['responses'])?['responder']?['email']` |
 | 9 | Send an email (V2) → **Send an email (V2) Timed out** | To | `first(body('Get_items_Permit')?['value'])?['Coordinator']?['Email']` |
 |  |  | Subject | Text `No approval response in 29 days: @{outputs('Compose_PermitNumber')}` |
-|  |  | Body | Text `The approval request expired. Upload the signed copy again to restart it.` |
+|  |  | Body | Text `The approval request expired. Delete the signed copy from the permit folder, then upload it again to restart the approval.` |
 |  |  | Run after | **Start and wait for an approval**: tick only **has timed out** |
 
 Text F4-E — approval Details:
@@ -1533,7 +1556,7 @@ Notes on path C:
 - The outcome values are `Approve` and `Reject`. They are case-sensitive.
 - A flow run lasts at most 30 days. The 29-day timeout lets action 9 warn the coordinator before the run ends.
 - Add action 9 as a parallel branch beside action 8, so its run-after setting stands alone.
-- On Reject, the permittee's signed date is cleared. The coordinator fixes the draft and starts again.
+- On Reject, the permittee's signed date is cleared. The coordinator fixes the draft and starts again. If the draft is not regenerated, the signed copy keeps the same name, so delete the old signed copy before uploading the new one.
 - In US Government plans, an approver must already be a user in the tenant.
 
 ## F4 path D — SharePoint eSignature
@@ -1554,7 +1577,7 @@ External signers must be enabled as guests in Microsoft Entra. Each request cost
 
 ### F4d — optional: record the signed copy automatically
 
-Once the test shows how signed copies are named, F4d can do steps 6 and 7. Build it as F4c's trigger with one trigger condition that matches that file name. Then add F4c's actions 1 to 4 with **Doc Type Value** `Executed Permit`. Finish with one **Update item** that sets **Superintendent Signed** and **Status Value** `Executed`, and one **Audit** row with EventType `Signed`.
+Once the test shows how signed copies are named, F4d can do steps 6 and 7. Build it as F4c's trigger with one trigger condition that matches that file name. Then add F4c's actions 1 to 4 with **Doc Type Value** `Executed Permit`. Finish with one **Update item** on Permits: **Id** `first(body('Get_items_Permit')?['value'])?['ID']`, **Superintendent Signed** `formatDateTime(convertFromUtc(utcNow(), 'Eastern Standard Time'), 'yyyy-MM-dd')`, **Status Value** `Executed`. Then add one **Audit** row with EventType `Signed`, PermitNumber `outputs('Compose_PermitNumber')` and PermitId set to the same Id expression. If the signed copy's name does not start with the permit number, set **Compose PermitNumber** from `{Path}` as F9's action 3 does.
 
 ## F9 — Stamp the permit number on uploaded files
 
@@ -1606,12 +1629,13 @@ and(empty(body('Get_file_properties_Fresh')?['PermitNumber']), greater(length(bo
 - The permit number is the start of the permit folder's name. Action 3 reads it from the file's path.
 - Files that F3, F4 or F8 create are stamped by those flows. The two-minute delay and the fresh read in action 2 let F9 skip them.
 - A file outside a permit folder, such as a template, matches no permit and is left alone.
+- F9 runs for files that are uploaded or newly created. Microsoft says a file moved in from another library starts no flow. Tell staff to upload, not move, or to type the **Permit Number** on a moved file. F10 stamps moved files at migration.
 - F9 does not set **Doc Type**. The person who uploads the file sets it.
 - *Test in your tenant:* upload a file to a permit folder and check `{Path}` in run history. It should read like `PermitRecords/Open Projects/SUP-2026-0042_Name_Place/`.
 
-## F10 — Migration folder match (run once)
+## F10 — Migration folder match (run after each batch)
 
-F10 matches each folder to its permit by the number at the start of the folder's name. Delete the flow after the migration.
+F10 matches each folder to its permit by the number at the start of the folder's name, and stamps the permit number on the files in the folder. Delete the flow after the migration.
 
 - **Trigger:** **Manually trigger a flow**, with no inputs. Flow name: `SUP – Migration Folder Match`.
 
@@ -1638,6 +1662,14 @@ F10 matches each folder to its permit by the number at the start of the folder's
 |  |  | Folder Path | `outputs('Compose_FolderPath')` |
 |  |  | Folder | `concat(outputs('Compose_TenantRoot'), replace(outputs('Compose_FolderPath'), ' ', '%20'))` |
 |  |  | Status Value | `first(body('Get_items_Permit')?['value'])?['Status']?['Value']` |
+| 3.2.4 | Get files (properties only) → **Get files Unstamped** | Library Name | Choose **Permit Records** |
+|  |  | Filter Query | Text `FSObjType eq 0 and PermitNumber eq null` |
+|  |  | Limit Entries to Folder | `concat('/PermitRecords/', items('Apply_to_each_Top'), '/', items('Apply_to_each_Folder')?['{FilenameWithExtension}'])` |
+|  |  | Top Count | Text `5000` |
+| 3.2.5 | Apply to each → **Apply to each File** | Select an output from previous steps | `if(greater(length(body('Get_items_Permit')?['value']), 0), body('Get_files_Unstamped')?['value'], json('[]'))` |
+| 3.2.5.1 | Update file properties → **Update file properties Stamp** | Library Name | Choose **Permit Records** |
+|  |  | Id | `items('Apply_to_each_File')?['ID']` |
+|  |  | Permit Number | `outputs('Compose_LegacyNumber')` |
 
 Expression F10-A — a permit matches and has no folder path yet:
 
@@ -1667,7 +1699,7 @@ The setup script cannot import your tracker. It loads only `Permits-sample.csv`.
 
 Legacy numbers must not contain an underscore, because F10 reads the number as the text before the first underscore.
 
-Flow F9 stamps the permit number on every moved file, about three actions per file. A standard licence allows a limited number of actions a day. Move a few hundred files at a time if you have thousands.
+Flow F9 does not run for files that are moved in. Microsoft's connector guidance says a move keeps each file's created date and starts no flow in the destination library. F10 therefore stamps the permit number on the files itself, one action per file. A standard licence allows a limited number of actions a day, so run F10 after each batch of a few hundred files if you have thousands. *Test in your tenant:* move five files first and check whether F9 runs; if it does, F10 simply finds nothing left to stamp.
 
 ## Summary
 

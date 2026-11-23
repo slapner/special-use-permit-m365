@@ -23,7 +23,7 @@ The step-by-step build guide is `docs/build-guide.md`. This kit uses the same li
 
 ## The flows
 
-Count rule, the same as the build guide: **13 flows** stay switched on when you use an e-signature connector (DocuSign or Adobe Acrobat Sign). Both F2 flows count. F10 runs once at migration and is not counted. With no e-signature service (path C), F4c replaces F4a and F4b, so 12 flows stay on. With SharePoint eSignature (path D), the optional F4d replaces them.
+Count rule, the same as the build guide: **13 flows** stay switched on when you use an e-signature connector (DocuSign or Adobe Acrobat Sign). Both F2 flows count. F10 runs once at migration and is not counted. With no e-signature service (path C), F4c replaces F4a and F4b, so 12 flows stay on. With SharePoint eSignature (path D), the optional F4d replaces them. On path A, if you save two extra copies of F4b for declined and voided envelopes (`flows.md`, F4b path A trigger), 15 flows stay on.
 
 | ID | Flow name | What it does |
 |---|---|---|
@@ -41,7 +41,7 @@ Count rule, the same as the build guide: **13 flows** stay switched on when you 
 | F4c | `SUP – Signed Upload and Approval` | Path C: permittee-signed upload, then an approval |
 | F4d | `SUP – Signed Copy Arrived` | Path D, optional: records the SharePoint eSignature signed copy |
 | F9 | `SUP – Stamp Permit Number` | Stamps the permit number on files people upload |
-| F10 | `SUP – Migration Folder Match` | Run once at migration: links migrated folders to permits |
+| F10 | `SUP – Migration Folder Match` | Run at migration: links migrated folders to permits and stamps the permit number on their files |
 
 The three names without spaces matter: the app calls those flows by name.
 
@@ -59,7 +59,7 @@ The three names without spaces matter: the app calls those flows by name.
    Register-PnPEntraIDAppForInteractiveLogin -ApplicationName "SUP Provisioning" -Tenant contoso.onmicrosoft.com -AzureEnvironment USGovernment
    ./Provision-SUPSite.ps1 -TenantUrl https://contoso.sharepoint.com -ClientId <guid> -OwnerEmail you@contoso.com -AzureEnvironment USGovernment -SiteAlias SUP-Test -WhatIf
    ```
-4. **A service account for flows**, for example `svc-sup-flows@agency`, with a licence, a mailbox and a OneDrive. It owns the solution, every connection, every flow, the form and the app. Ask IT to exempt it from interactive multi-factor prompts, and to give it **Full Access** and **Send As** on the shared mailbox.
+4. **A service account for flows**, for example `svc-sup-flows@agency`, with a licence, a mailbox and a OneDrive. It owns the solution, every connection, every flow, the form and the app. Ask IT to exempt it from interactive multi-factor prompts, and to give it **Full Access** and **Send As** on the shared mailbox. Mailbox rights take about two hours to apply.
 5. **Licensing** (the same rules as the build guide's "Who needs Premium"):
    - Word Online (Business) is the only Premium connector. Only F3 version 2 (*Populate a Microsoft Word template*) needs it as built. F4a converts to PDF with Standard OneDrive actions; the Word Online *Convert Word Document to PDF* action is only the alternative.
    - A flow started from the app is licensed per person who runs it. For F3 version 2 (and F4a with the alternative PDF action), either every coordinator who runs it needs Power Apps Premium, or the flow carries one Power Automate Process licence. A Premium licence on the service account alone does not cover it; one licensed account shared by many users is not compliant.
@@ -67,7 +67,7 @@ The three names without spaces matter: the app calls those flows by name.
    - Every other flow, the app and the site run on standard Microsoft 365 licences.
    - Ask IT whether the environment is a **Managed Environment**. If it is, everyone who runs a flow needs Premium, even with standard connectors.
    - E-signature, by cloud:
-     - **DocuSign (path A):** Standard connector; commercial, GCC, GCC High and DoD. The only connector listed for GCC High and DoD. Needs a DocuSign licence.
+     - **DocuSign (path A):** Standard connector; commercial, GCC, GCC High and DoD. The only connector listed for GCC High and DoD. Needs a DocuSign licence. Ask the DocuSign administrator to enable **DocuSign Connect** on the account: F4b's trigger needs it, and it is off by default. A developer sandbox needs the separate **Docusign Demo** connector.
      - **Adobe Acrobat Sign (path B):** Standard connector; commercial and GCC only. Needs an Acrobat Sign licence.
      - **Signed upload plus Approvals (path C):** Standard. Approvals is not a legal e-signature; confirm with counsel.
      - **SharePoint eSignature (path D):** $2 per request (pay-as-you-go, billed to an Azure subscription), PDF only, no Power Automate action or trigger. Documented for the commercial cloud only; treat it as unavailable in government clouds.
@@ -80,7 +80,7 @@ The three names without spaces matter: the app calls those flows by name.
 4. *(Test site only)* Re-run with `-ImportSamplePermits`. The script is idempotent, so existing objects are skipped.
 5. > **⚠️ Add the flow service account to SUP Owners. The script does not do this.** Select the gear, then **Site permissions → Advanced permissions settings → SUP Owners → New → Add users**. Without it, F1b fails at *Update item Settings* (the permit number counter) and every audit write fails with error 403. `-OwnerEmail` is added to SUP Owners, but that is a person, not the service account.
 6. Add people to the other four groups: SUP Coordinators, SUP Compliance, SUP Approving Officials and SUP Viewers. Use one Entra security group per role. Empty or remove the communication site's two default groups, "*Special Use Permits* Members" and "*Special Use Permits* Visitors". ComplianceItems, Permit Records, AuditLog, Settings, ConditionLibrary and SUP Admin no longer inherit from them, but the site does.
-7. Fill the optional Settings rows if you use them: `Approvers` (approving officials' emails, separated by `;` with no spaces; read by the app) and `DefaultCoordinator`, `DefaultSuperintendent` (one email each; F1b add-on A). The script creates all three blank, or with the values of `-Approvers`, `-DefaultCoordinator` and `-DefaultSuperintendent` on the run that first creates them. Later runs skip rows that exist, so after that edit the rows in the Settings list.
+7. Fill the Settings row `Editors` (coordinators' and owners' emails, separated by `;` with no spaces). The app shows its action buttons only to the people listed, so fill it before building the app. Then fill the optional Settings rows if you use them: `Approvers` (approving officials' emails, separated by `;` with no spaces; read by the app) and `DefaultCoordinator`, `DefaultSuperintendent` (one email each; F1b add-on A). The script creates all four rows blank, or with the values of `-Editors`, `-Approvers`, `-DefaultCoordinator` and `-DefaultSuperintendent` on the run that first creates them. Later runs skip rows that exist, so after that edit the rows in the Settings list.
 8. Upload the Word templates to `Permit Records/_Templates`. If your file names differ from `PermitTypes-seed.csv`, fix `PermitTypes.TemplateFile`.
 9. Work through "Validate (test site)" below, then build the flows in the order of the next section.
 
@@ -99,13 +99,13 @@ Build in the build guide's six delivery stages. Each stage leaves a system staff
 | 5. Coordinator app | The Power Apps app | F2b, F9 | Standard |
 | 6. Reporting | The Power BI report | none | Power BI Pro per person |
 
-After stage 1, staff can run the program on list views and list forms. F10 is built and run once during migration (build guide Step 9.3), then deleted.
+After stage 1, staff can run the program on list views and list forms. F10 is built during migration (build guide Step 9.3) and run after each batch of moved folders, then deleted. It also stamps the permit number on the moved files, because a move does not start F9.
 
 ## Validate (test site)
 - [ ] All lists and both libraries (Permit Records, SUP Admin) exist, and their column **internal** names match the spec. Check List settings → click a column → the URL shows `Field=<InternalName>`.
 - [ ] `Status` shows 10 choices. `Impacts` and `TriggerImpacts` show 10 choices each.
 - [ ] ConditionLibrary has 24 rows. OPS-04 shows two Applies To Types; WAT-01 shows five. Its *Changed this year* view exists.
-- [ ] Settings has `ReminderDaysPermitExpiry`, `ReminderDaysCOI`, `ReminderDaysStartUnexecuted`, `ProgramMailbox`, `NextSeq_<this year>`, `NextSeq_<next year>`, `Approvers`, `DefaultCoordinator` and `DefaultSuperintendent`.
+- [ ] Settings has `ReminderDaysPermitExpiry`, `ReminderDaysCOI`, `ReminderDaysStartUnexecuted`, `ProgramMailbox`, `NextSeq_<this year>`, `NextSeq_<next year>`, `Approvers`, `Editors`, `DefaultCoordinator` and `DefaultSuperintendent`.
 - [ ] Each view returns what `list-views.md` says it should. With the samples:
   - "Expiring in 60 days" shows 0005, 0006 and 0007.
   - "COI expiring" shows 0006 and 0007.
@@ -145,6 +145,9 @@ After stage 1, staff can run the program on list views and list forms. F10 is bu
 - **NextSeq rows:** Settings gets `NextSeq_<this year>` **and** `NextSeq_<next year>`, so the January rollover has a row. F1b also creates the row if it is missing.
 - **ProgramMailbox:** seeded from `-ProgramMailbox` (default `sup-permits@agency.example`). Set the real address. F1b, F5 and F6 read it.
 - **Optional Settings rows:** `Approvers`, `DefaultCoordinator` and `DefaultSuperintendent` are created blank unless you pass values. A blank value is ignored. A wrong email in a default row makes F1b add-on A fail.
+- **`Editors` row:** created blank unless you pass `-Editors`. It is not optional: the app sets `varCanEdit` from it, because Power Apps cannot read a person's SharePoint permission on a list. A blank row hides the app's action buttons from everyone. It only hides buttons; SharePoint permissions still decide what a person can change.
+- **Run only users:** on the app-started flows (F2b, F3, F4a), set every connection, including DocuSign or Adobe Acrobat Sign, to the service account's connection (`flows.md`, Rules that apply to every flow). Otherwise coordinators are asked to sign in with their own accounts and rows and files are created in their names. The AuditLog row does not prove the setting, because F7a writes it on its own connection; check **Created By** on a new PermitConditions row instead.
+- **Migrated files:** a file moved into Permit Records does not start F9, so F10 stamps the permit number on migrated files. After go-live, tell staff to upload files rather than move them.
 - **F3 version 1:** creates the draft under its final name with *Get file content using path* and *Create file*. The older *Copy file* plus rename is kept in `flows.md` only as an alternative, because no standard action renames a file.
 - **F4:** provider tiers and clouds are settled (see Licensing above). F4a uses the Standard OneDrive *Convert file* route; the Premium Word Online action is the alternative. Provider action and field names are marked **verify** in `flows.md`.
 - **F7b:** reads the previous Status from version history through *Send an HTTP request to SharePoint*, because *Get changes* returns only changed/unchanged flags. It takes the newest version whose Status differs, not simply the previous version.

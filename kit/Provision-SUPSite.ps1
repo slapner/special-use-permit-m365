@@ -29,7 +29,7 @@
     Creates: the communication site; 7 lists; the Permit Records library (Open Projects, Closed Projects,
     _Templates); the owners-only SUP Admin library (solution backups); the 5 SUP groups and permissions;
     indexes; the 6 Permits views and the "Changed this year" view on ConditionLibrary; column formatting;
-    Settings rows (including blank Approvers, DefaultCoordinator and DefaultSuperintendent rows);
+    Settings rows (including blank Approvers, Editors, DefaultCoordinator and DefaultSuperintendent rows);
     PermitTypes and ConditionLibrary seed data; optionally sample permits.
 
     Does NOT: add the flow service account to SUP Owners (do this by hand: see README), set the site
@@ -60,6 +60,11 @@
     Read by the app (formula 6-A). Default blank; a blank row means nobody is treated as an approver.
     Like every Settings value, it is written only when the row is first created; later runs skip the row.
 
+.PARAMETER Editors
+    Value for the Settings row Editors: coordinators' and owners' emails separated by ";" with no spaces.
+    Read by the app (formula 6-A) to show its action buttons. Default blank; until the row is filled in,
+    the app hides its action buttons from everyone. Written only when the row is first created.
+
 .PARAMETER DefaultCoordinator
     Value for the Settings row DefaultCoordinator: one email address, used by F1b add-on A.
     Default blank; a blank row leaves Coordinator empty. A wrong address makes F1b fail.
@@ -85,6 +90,7 @@ param(
     [string] $SiteTitle = 'Special Use Permits',
     [string] $ProgramMailbox = 'sup-permits@agency.example',
     [string] $Approvers = '',
+    [string] $Editors = '',
     [string] $DefaultCoordinator = '',
     [string] $DefaultSuperintendent = '',
     [string] $KitPath = $PSScriptRoot,
@@ -480,6 +486,8 @@ $SettingsSeed = [ordered]@{
     "NextSeq_$($year + 1)"      = '1'   # pre-seeded for year rollover; F1b also creates it if missing
     # Optional rows (build guide Step 1.2). Blank by default: a blank value is ignored by the app and by F1b add-on A.
     Approvers                   = $Approvers
+    # Editors is read by the app (formula 6-A) to show its action buttons. Fill it in before Phase 6.
+    Editors                     = $Editors
     DefaultCoordinator          = $DefaultCoordinator
     DefaultSuperintendent       = $DefaultSuperintendent
 }
