@@ -20,30 +20,31 @@ All names come from `spec/data-model.md`. Do not rename lists or columns: the in
 | `flows.md` | Action-by-action build sheets for flows F1–F7, with expressions, connectors and Premium flags. |
 
 ## Prerequisites
-1. **PowerShell 7.2 or later** and **PnP.PowerShell 2.x or 3.x**: `Install-Module PnP.PowerShell -Scope CurrentUser`
+1. **PowerShell 7.4 or later** and **PnP.PowerShell 3.x**: `Install-Module PnP.PowerShell -Scope CurrentUser`. Cmdlet and parameter names were checked offline against PnP.PowerShell 3.5.0.
 2. **SharePoint Administrator** rights for the person running the script, because the site is created through the admin endpoint.
 3. **Your own Entra ID app registration.** PnP's shared multi-tenant app was retired in September 2024. Run this once, with an admin consenting:
    ```powershell
    Register-PnPEntraIDAppForInteractiveLogin -ApplicationName "SUP Provisioning" -Tenant contoso.onmicrosoft.com -Interactive
    ```
    Pass the resulting Application (client) ID as `-ClientId`.
-4. **A service account for flows.** It needs a licence and a mailbox, and must be added to **SUP Owners** after provisioning, because AuditLog is owners-only for edits.
+4. **A service account for flows.** It needs a licence and a mailbox, and must be added to **SUP Owners** after provisioning, because AuditLog, Settings (the permit number counter) and ConditionLibrary are owners-only for edits. Add the program lead who maintains condition wording to SUP Owners too, or grant them Contribute on ConditionLibrary.
 5. **Licensing:**
    - Standard Microsoft 365 is enough for every flow except F3's *Populate a Microsoft Word template*, which is **Premium**. A Standard fallback is described in `flows.md`.
    - E-signature needs SharePoint eSignature (pay-as-you-go) or Adobe Acrobat Sign.
 
 ## Run order
-1. `./Provision-SUPSite.ps1 -TenantUrl https://contoso.sharepoint.com -ClientId <guid> -OwnerEmail you@contoso.com -SiteAlias SUP-Test -ImportSamplePermits -WhatIf`. This is a dry run: the site steps are reported only.
+1. `./Provision-SUPSite.ps1 -TenantUrl https://contoso.sharepoint.com -ClientId <guid> -OwnerEmail you@contoso.com -SiteAlias SUP-Test -WhatIf`. This is a dry run: create steps are reported but not performed.
 2. Run the same command without `-WhatIf`. Read the summary; any `FAIL` lines are listed at the end, and the script exits with code 1.
-3. Set **Site settings → Regional settings → Time zone** to the office time zone.
-4. Add people to the groups: SUP Coordinators, SUP Compliance, SUP Approving Officials and SUP Viewers. Empty or remove the communication site's default "*Special Use Permits* Members/Visitors" groups. The script prints a reminder.
-5. Upload the Word templates to `Permit Records/_Templates`. If your file names differ from `PermitTypes-seed.csv`, fix `PermitTypes.TemplateFile`.
-6. Build the flows in `flows.md` in this order: **F7a → F1b → F7b → F5 → F2 → F6 → F3 → F4** (then F1a, if you use Forms).
-7. Test with the sample permits. Then, on production, run **without** `-ImportSamplePermits`. On a test site that will become production, delete the sample items, folders and AuditLog rows, and reset `NextSeq_<year>` to `1`.
+3. Set **Site settings → Regional settings → Time zone** to the office time zone. Do this *before* importing samples, because date-only values can shift a day if the site time zone is wrong.
+4. *(Test site only)* Re-run with `-ImportSamplePermits`. The script is idempotent, so existing objects are skipped.
+5. Add people to the groups: SUP Coordinators, SUP Compliance, SUP Approving Officials and SUP Viewers. Empty or remove the communication site's default "*Special Use Permits* Members/Visitors" groups. ComplianceItems, Permit Records and AuditLog no longer inherit from them, but the site does.
+6. Upload the Word templates to `Permit Records/_Templates`. If your file names differ from `PermitTypes-seed.csv`, fix `PermitTypes.TemplateFile`.
+7. Build the flows in `flows.md` in this order: **F7a → F1b → F7b → F5 → F2 → F6 → F3 → F4** (then F1a, if you use Forms).
+8. Test with the sample permits. Then, on production, run **without** `-ImportSamplePermits`. On a test site that will become production, delete the sample items, folders and AuditLog rows, and reset `NextSeq_<year>` to `1`.
 
 ## Validate (test site)
 - [ ] All lists exist, and their column **internal** names match the spec. Check List settings → click a column → the URL shows `Field=<InternalName>`.
-- [ ] `Status` shows 10 choices, with the en dash in `Active – Compliance Monitoring`. `Impacts` and `TriggerImpacts` show 10 choices each.
+- [ ] `Status` shows 10 choices. `Impacts` and `TriggerImpacts` show 10 choices each.
 - [ ] ConditionLibrary has 22 rows. OPS-04 shows two Applies To Types.
 - [ ] Each view returns what `list-views.md` says it should. With the samples:
   - "Expiring in 60 days" shows 0005, 0006 and 0007.
@@ -66,6 +67,8 @@ All names come from `spec/data-model.md`. Do not rename lists or columns: the in
 - **Extra indexes beyond the spec:** `ProposedStart`, `SourceSubmissionId`, `ConditionLibrary.ConditionCode`, `AuditLog.PermitId`, the `Permit` lookups, and `Settings.Title`. Versioning is on for Permits and the library, because F7b needs it.
 - **Extra folder:** `_Templates` under Permit Records, for the Word templates.
 - **Title optional:** `Title` is made not-required on Permits, PermitConditions, ComplianceItems and AuditLog, because flows fill it.
+- **Unique permissions:** ComplianceItems, Permit Records and AuditLog get unique permissions on the first run only. Inheritance is broken without copying, and the five SUP groups are granted explicitly. Re-runs leave those permissions alone.
+- **Site path in flows:** the flows take the site path from `Compose SiteRel` and `Compose TenantRoot`, so the same build sheets work on `SUP-Test` and `SpecialUsePermits`.
 - **English role names:** role names are the English defaults (Full Control, Edit, Contribute, Read). Non-English sites need the localized names.
 - **Folder name sanitizing:** characters are stripped exactly per spec. Commas, periods and other characters are kept. A leading or trailing `.` would make SharePoint reject the folder name; this is noted in F1.
 - **"Closed this year" view:** it is hard-coded to 1 January of the year the script ran. Edit it each January, or switch it to a rolling 365 days (see `list-views.md`).

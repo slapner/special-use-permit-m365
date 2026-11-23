@@ -4,11 +4,11 @@
 
 Status groups used below:
 
-- **Open** (7): Received, Under Review, Draft Permit, Out for Permittee Signature, Out for Superintendent Signature, Executed, Active – Compliance Monitoring
+- **Open** (7): Received, Under Review, Draft Permit, Out for Permittee Signature, Out for Superintendent Signature, Executed, Active
 - **Unexecuted** (5): Received, Under Review, Draft Permit, Out for Permittee Signature, Out for Superintendent Signature
 - **Closed** (3): Closed, Withdrawn, Denied
 
-`Active – Compliance Monitoring` uses an **en dash (–)**, not a hyphen. A view filter typed with a hyphen matches nothing.
+Status names contain no dashes or punctuation, so view filters and flow conditions can match them as typed.
 
 **Why the script uses CAML:** the classic "Filter" section of view settings evaluates AND/OR strictly left to right with no parentheses, and allows at most 10 conditions. "Status is one of 7 values AND a date range" cannot be expressed reliably there. The script writes CAML (`<In>` plus nested `<And>`), and the UI recipes below are simplified equivalents. If you edit a script-created view in the classic UI, SharePoint may rewrite or drop its `<In>` clause, so re-check it afterwards.
 
@@ -35,15 +35,15 @@ Common columns: Title (permit number, linked), Project Title, Applicant Organiza
 ## 2. Expiring in 60 days
 | | |
 |---|---|
-| Filter | Status in (Executed, Active – Compliance Monitoring) AND Permit Expiration ≥ **[Today]** AND Permit Expiration ≤ **[Today]+60** |
+| Filter | Status in (Executed, Active) AND Permit Expiration ≥ **[Today]** AND Permit Expiration ≤ **[Today]+60** |
 | Sort | Permit Expiration ascending |
 | Extra columns | Permit Expiration, COI Expiration |
-| UI recipe | Permit Expiration *≥* `[Today]` AND Permit Expiration *≤* `[Today]+60` AND Status *is not equal to* Closed AND Status *is not equal to* Withdrawn AND Status *is not equal to* Denied |
+| UI recipe | Permit Expiration *≥* `[Today]` AND Permit Expiration *≤* `[Today]+60` AND Status *is not equal to* Closed AND Status *is not equal to* Withdrawn AND Status *is not equal to* Denied. **Approximation only:** unlike the CAML, it also shows unexecuted permits that already have an expiration date. Add Status ≠ each of the 5 unexecuted values (10 conditions total) to match the CAML exactly. |
 
 ```xml
 <OrderBy><FieldRef Name='PermitExpiration' Ascending='TRUE'/></OrderBy>
 <Where><And><And>
-  <In><FieldRef Name='Status'/><Values><Value Type='Text'>Executed</Value><Value Type='Text'>Active – Compliance Monitoring</Value></Values></In>
+  <In><FieldRef Name='Status'/><Values><Value Type='Text'>Executed</Value><Value Type='Text'>Active</Value></Values></In>
   <Geq><FieldRef Name='PermitExpiration'/><Value Type='DateTime'><Today/></Value></Geq></And>
   <Leq><FieldRef Name='PermitExpiration'/><Value Type='DateTime'><Today OffsetDays='60'/></Value></Leq>
 </And></Where>
@@ -93,7 +93,7 @@ This view also includes permits whose start date has **already passed** without 
 | Filter | Status in **Unexecuted** AND Proposed Start ≤ **[Today]+30** |
 | Sort | Proposed Start ascending |
 | Extra columns | Proposed Start, COI Received |
-| UI recipe | Proposed Start *≤* `[Today]+30` AND Status ≠ Executed AND Status ≠ Active – Compliance Monitoring AND Status ≠ Closed AND Status ≠ Withdrawn AND Status ≠ Denied |
+| UI recipe | Proposed Start *≤* `[Today]+30` AND Status ≠ Executed AND Status ≠ Active AND Status ≠ Closed AND Status ≠ Withdrawn AND Status ≠ Denied |
 
 ```xml
 <OrderBy><FieldRef Name='ProposedStart' Ascending='TRUE'/></OrderBy>
@@ -139,7 +139,7 @@ To apply a formatter by hand: open the list, click the column header, then **Col
 | Under Review | light yellow | dark yellow |
 | Draft Permit | light orange | brown |
 | Out for Permittee / Superintendent Signature | light purple | purple |
-| Executed / Active – Compliance Monitoring | light green | dark green |
+| Executed / Active | light green | dark green |
 | Denied | light red | dark red |
 | Closed / Withdrawn | grey | dark grey |
 
@@ -155,8 +155,8 @@ To apply a formatter by hand: open the list, click the column header, then **Col
     "font-size": "12px",
     "font-weight": "600",
     "white-space": "nowrap",
-    "background-color": "=if(@currentField == 'Received', '#deecf9', if(@currentField == 'Under Review', '#fff4ce', if(@currentField == 'Draft Permit', '#fde7d9', if(@currentField == 'Out for Permittee Signature', '#efd9fd', if(@currentField == 'Out for Superintendent Signature', '#e3d0f5', if(@currentField == 'Executed', '#dff6dd', if(@currentField == 'Active – Compliance Monitoring', '#c4e8c1', if(@currentField == 'Denied', '#fde7e9', '#edebe9'))))))))",
-    "color": "=if(@currentField == 'Received', '#004578', if(@currentField == 'Under Review', '#6d5700', if(@currentField == 'Draft Permit', '#8a3a00', if(@currentField == 'Out for Permittee Signature', '#5c2e91', if(@currentField == 'Out for Superintendent Signature', '#4b1f7a', if(@currentField == 'Executed', '#0b6a0b', if(@currentField == 'Active – Compliance Monitoring', '#0b5a0b', if(@currentField == 'Denied', '#a4262c', '#323130'))))))))"
+    "background-color": "=if(@currentField == 'Received', '#deecf9', if(@currentField == 'Under Review', '#fff4ce', if(@currentField == 'Draft Permit', '#fde7d9', if(@currentField == 'Out for Permittee Signature', '#efd9fd', if(@currentField == 'Out for Superintendent Signature', '#e3d0f5', if(@currentField == 'Executed', '#dff6dd', if(@currentField == 'Active', '#c4e8c1', if(@currentField == 'Denied', '#fde7e9', '#edebe9'))))))))",
+    "color": "=if(@currentField == 'Received', '#004578', if(@currentField == 'Under Review', '#6d5700', if(@currentField == 'Draft Permit', '#8a3a00', if(@currentField == 'Out for Permittee Signature', '#5c2e91', if(@currentField == 'Out for Superintendent Signature', '#4b1f7a', if(@currentField == 'Executed', '#0b6a0b', if(@currentField == 'Active', '#0b5a0b', if(@currentField == 'Denied', '#a4262c', '#323130'))))))))"
   }
 }
 ```

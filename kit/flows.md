@@ -5,7 +5,10 @@
 ## Conventions used in every flow
 
 - **Rename actions exactly as written.** Expressions refer to actions by name with spaces turned into underscores. The action `Get item Permit` is referenced as `body('Get_item_Permit')`.
-- **Site Address:** `https://<tenant>.sharepoint.com/sites/SpecialUsePermits`.
+- **Site Address:** `https://<tenant>.sharepoint.com/sites/SpecialUsePermits`, or your test alias such as `/sites/SUP-Test`.
+- **Never hard-code the site path in expressions.** Every flow that builds paths (F1b, F3 and F5) starts with two Compose actions. Better still, create solution environment variables and point these Composes at them, so test and production differ only by environment variable:
+  - **Compose SiteRel:** `/sites/SpecialUsePermits`
+  - **Compose TenantRoot:** `https://<tenant>.sharepoint.com`
 - **List names:** use the display names in the dropdowns: `Permits`, `Settings`, and so on. The library's display name is `Permit Records` and its URL is `PermitRecords`.
 - **Connection account:** use one service account (a licensed, non-personal mailbox user) for all SharePoint, Outlook and Approvals connections. Put it in **SUP Owners**. AuditLog is owners-only for edits, and moving folders needs edit rights on both top folders.
 - **Store flows in a solution.** Child flows (F7a) only work in solution-aware flows. Put environment variables `SiteUrl` and `TimeZone` in the solution if you want portability.
@@ -96,6 +99,7 @@ Why: the sequence number is a read-modify-write on the `NextSeq_{year}` row in S
 
 **Actions:**
 
+0. **Compose SiteRel** and **Compose TenantRoot** (see Conventions).
 1. **Initialize variable** `varSeq` (Integer) = `0`
 2. **Initialize variable** `varSettingsId` (Integer) = `0`
 3. **Compose Year**
@@ -140,13 +144,13 @@ Why: the sequence number is a read-modify-write on the `NextSeq_{year}` row in S
     - Folder Path: `Open Projects/@{outputs('Compose_FolderName')}`
 12. **Compose FolderPath** (server-relative, as stored in Permits.FolderPath)
     ```
-    concat('/sites/SpecialUsePermits/PermitRecords/Open Projects/', outputs('Compose_FolderName'))
+    concat(outputs('Compose_SiteRel'), '/PermitRecords/Open Projects/', outputs('Compose_FolderName'))
     ```
 13. **Update item Permit** (Permits)
     - Id: `triggerBody()?['ID']`
     - Title: `outputs('Compose_PermitNumber')`
     - PermitNumber: `outputs('Compose_PermitNumber')`
-    - FolderUrl: `body('Create_new_folder')?['{Link}']`. **Verify:** if `{Link}` is empty, use `concat('https://<tenant>.sharepoint.com', replace(outputs('Compose_FolderPath'), ' ', '%20'))`. The Update item action only sets the hyperlink URL, not its description.
+    - FolderUrl: `body('Create_new_folder')?['{Link}']`. **Verify:** if `{Link}` is empty, use `concat(outputs('Compose_TenantRoot'), replace(outputs('Compose_FolderPath'), ' ', '%20'))`. The Update item action only sets the hyperlink URL, not its description.
     - FolderPath: `outputs('Compose_FolderPath')`
     - ReceivedDate: `coalesce(triggerBody()?['ReceivedDate'], formatDateTime(convertFromUtc(utcNow(), 'Eastern Standard Time'), 'yyyy-MM-dd'))`
     - Status Value: `coalesce(triggerBody()?['Status']?['Value'], 'Received')`
@@ -251,6 +255,7 @@ Then add:
 - A **Repeating Section** content control tagged `Conditions`, containing plain-text controls `ConditionCode` and `ConditionText`. Use Word's numbered-list style for numbering.
 
 **Actions:**
+0. **Compose SiteRel** (see Conventions).
 1. **Get item Permit** (Permits): Id = PermitId
 2. **Get item Type** (PermitTypes): Id = `body('Get_item_Permit')?['PermitType']?['Id']`
 3. **Get items Conditions** (PermitConditions)
@@ -264,7 +269,7 @@ Then add:
      - `ConditionText`: `item()?['ConditionText']`
 5. **Compose FolderSiteRel** (path relative to the site, as SharePoint actions expect)
    ```
-   replace(body('Get_item_Permit')?['FolderPath'], '/sites/SpecialUsePermits', '')
+   replace(body('Get_item_Permit')?['FolderPath'], outputs('Compose_SiteRel'), '')
    ```
 6. **Get files Drafts.** Use *Get files (properties only)* on Permit Records.
    - Filter Query: `startswith(FileLeafRef, '@{body('Get_item_Permit')?['PermitNumber']}_DraftPermit_v')`
@@ -409,7 +414,8 @@ Trigger condition (enter on one line):
 The flow's own update moves the folder path into `/Closed Projects/`, so the flow cannot retrigger itself.
 
 **Actions:**
-1. **Compose FolderSiteRel:** `replace(triggerBody()?['FolderPath'], '/sites/SpecialUsePermits', '')`. This gives `/PermitRecords/Open Projects/SUP-…`.
+0. **Compose SiteRel** and **Compose TenantRoot** (see Conventions).
+1. **Compose FolderSiteRel:** `replace(triggerBody()?['FolderPath'], outputs('Compose_SiteRel'), '')`. This gives `/PermitRecords/Open Projects/SUP-…`.
 2. **Move folder** (SharePoint, Standard)
    - Current Site Address: the site
    - Folder to Move: `outputs('Compose_FolderSiteRel')`
@@ -424,7 +430,7 @@ The flow's own update moves the folder path into `/Closed Projects/`, so the flo
 4. **Update item Permit** (Permits)
    - Id: `triggerBody()?['ID']`
    - FolderPath: `outputs('Compose_NewFolderPath')`
-   - FolderUrl: `concat('https://<tenant>.sharepoint.com', replace(outputs('Compose_NewFolderPath'), ' ', '%20'))`. Or use `body('Move_folder')?['{Link}']` if present; **verify**.
+   - FolderUrl: `concat(outputs('Compose_TenantRoot'), replace(outputs('Compose_NewFolderPath'), ' ', '%20'))`. Or use `body('Move_folder')?['{Link}']` if present; **verify**.
    - ClosedDate:
      ```
      coalesce(triggerBody()?['ClosedDate'], formatDateTime(convertFromUtc(utcNow(), 'Eastern Standard Time'), 'yyyy-MM-dd'))
@@ -472,10 +478,10 @@ The flow's own update moves the folder path into `/Closed Projects/`, so the flo
 6. **Select StartDates:** as above, from `Filter_array_Start`, with `ProposedStart`.
 7. **Get items Exp** (Permits), Top Count 500. Filter Query:
    ```
-   (@{join(body('Select_ExpDates'), ' or ')}) and (Status eq 'Executed' or Status eq 'Active – Compliance Monitoring')
+   (@{join(body('Select_ExpDates'), ' or ')}) and (Status eq 'Executed' or Status eq 'Active')
    ```
    With today = 2026-11-23, this resolves to:
-   `(PermitExpiration eq '2027-01-22' or PermitExpiration eq '2026-12-23' or PermitExpiration eq '2026-11-30') and (Status eq 'Executed' or Status eq 'Active – Compliance Monitoring')`
+   `(PermitExpiration eq '2027-01-22' or PermitExpiration eq '2026-12-23' or PermitExpiration eq '2026-11-30') and (Status eq 'Executed' or Status eq 'Active')`
 8. **Get items COI** (Permits). Filter Query:
    ```
    (@{join(body('Select_COIDates'), ' or ')}) and Status ne 'Closed' and Status ne 'Withdrawn' and Status ne 'Denied'
@@ -526,9 +532,9 @@ The flow's own update moves the folder path into `/Closed Projects/`, so the flo
        - Optional: wrap `Create_HTML_table` in `replace(..., '<table>', '<table border="1" cellpadding="4" style="border-collapse:collapse">')` for borders.
 16. **Apply to each Sent** over `body('Filter_array_Due')`, with **Concurrency 1**. A permit can appear twice (EXP and COI on the same day), so the updates must not race.
     1. **Get item Fresh** (Permits): Id `items('Apply_to_each_Sent')?['Id']`
-    2. **Compose NewKey.** This appends the key and keeps the last 20 entries.
+    2. **Compose NewKey.** This appends the key and keeps the last 12 entries. Each entry is about 15 characters, so 12 entries stay under the 255-character limit of a single-line column.
        ```
-       join(skip(split(concat(coalesce(body('Get_item_Fresh')?['LastReminderKey'], ''), '|', items('Apply_to_each_Sent')?['Key']), '|'), max(0, sub(length(split(concat(coalesce(body('Get_item_Fresh')?['LastReminderKey'], ''), '|', items('Apply_to_each_Sent')?['Key']), '|')), 20))), '|')
+       join(skip(split(concat(coalesce(body('Get_item_Fresh')?['LastReminderKey'], ''), '|', items('Apply_to_each_Sent')?['Key']), '|'), max(0, sub(length(split(concat(coalesce(body('Get_item_Fresh')?['LastReminderKey'], ''), '|', items('Apply_to_each_Sent')?['Key']), '|')), 12))), '|')
        ```
        The first run leaves a leading empty entry. That is harmless.
     3. **Update item Key** (Permits)

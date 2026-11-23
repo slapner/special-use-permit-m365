@@ -1,4 +1,4 @@
-#Requires -Version 7.2
+#Requires -Version 7.4
 <#
 .SYNOPSIS
     Provisions the Special Use Permit (SUP) SharePoint site, lists, library, groups, views and seed data.
@@ -10,7 +10,7 @@
     so do not edit them here without changing the spec, the flows and the app.
 
     Requirements
-      - PowerShell 7.2+ and PnP.PowerShell 2.x or 3.x:  Install-Module PnP.PowerShell -Scope CurrentUser
+      - PowerShell 7.4+ and PnP.PowerShell 3.x (checked against 3.5.0; 2.x needs PS 7.2+ and should also work):  Install-Module PnP.PowerShell -Scope CurrentUser
       - The account running this must be a SharePoint Administrator (site creation is done through the
         tenant admin endpoint).
       - Your OWN Entra ID app registration (-ClientId). PnP's shared multi-tenant "PnP Management Shell"
@@ -58,10 +58,9 @@ $script:Cmd = $PSCmdlet
 $script:Failures = [System.Collections.Generic.List[string]]::new()
 
 # ---------------------------------------------------------------------------------------------
-# Constants (exactly as spec/data-model.md). En dash built from code point to avoid file-encoding issues.
+# Constants (exactly as spec/data-model.md).
 # ---------------------------------------------------------------------------------------------
-$EnDash = [char]0x2013
-$StatusActive = "Active $EnDash Compliance Monitoring"
+$StatusActive = 'Active'
 $StatusValues = @('Received', 'Under Review', 'Draft Permit', 'Out for Permittee Signature',
     'Out for Superintendent Signature', 'Executed', $StatusActive, 'Closed', 'Withdrawn', 'Denied')
 $ClosedStatuses = @('Closed', 'Withdrawn', 'Denied')
@@ -103,7 +102,9 @@ function Invoke-Step {
     }
 }
 
-function Get-ListOrNull([string]$Title) { Get-PnPList -Identity $Title -ErrorAction SilentlyContinue }
+# All existence checks swallow "not found" errors and return $null (some PnP Get-* cmdlets throw instead of returning nothing).
+function Get-OrNull([scriptblock]$Get) { try { & $Get } catch { $null } }
+function Get-ListOrNull([string]$Title) { Get-OrNull { Get-PnPList -Identity $Title -ErrorAction Stop } }
 
 function Get-FieldOrNull([string]$List, [string]$Name) {
     try { Get-PnPField -List $List -Identity $Name -ErrorAction Stop } catch { $null }
@@ -172,7 +173,7 @@ function Ensure-Fields([string]$List, [array]$Fields) {
 
 function Find-Item([string]$List, [string]$Field, [string]$Value) {
     $caml = "<View><Query><Where><Eq><FieldRef Name='$Field'/><Value Type='Text'>$(ConvertTo-XmlText $Value)</Value></Eq></Where></Query><RowLimit>1</RowLimit></View>"
-    Get-PnPListItem -List $List -Query $caml | Select-Object -First 1
+    Get-OrNull { Get-PnPListItem -List $List -Query $caml -ErrorAction Stop | Select-Object -First 1 }
 }
 
 # Same rule as F1 in flows.md: strip ~ " # % & * : < > ? / \ { | } and spaces, max 30 chars.
@@ -201,7 +202,7 @@ Write-Step "Connecting to admin center $AdminUrl"
 Connect-PnPOnline -Url $AdminUrl -ClientId $ClientId -Interactive
 
 Write-Step "Site $SiteUrl"
-$site = Get-PnPTenantSite -Identity $SiteUrl -ErrorAction SilentlyContinue
+$site = Get-OrNull { Get-PnPTenantSite -Identity $SiteUrl -ErrorAction Stop }
 if ($site) {
     Write-Skip 'site exists'
 }
@@ -209,7 +210,7 @@ else {
     Invoke-Step $SiteUrl 'Create communication site' {
         New-PnPSite -Type CommunicationSite -Title $SiteTitle -Url $SiteUrl -Owner $OwnerEmail -Lcid 1033 -Wait | Out-Null
     }
-    $site = Get-PnPTenantSite -Identity $SiteUrl -ErrorAction SilentlyContinue
+    $site = Get-OrNull { Get-PnPTenantSite -Identity $SiteUrl -ErrorAction Stop }
 }
 if (-not $site) {
     if ($WhatIfPreference) { Write-Host 'WhatIf: site does not exist yet, remaining steps cannot be previewed.' -ForegroundColor Yellow; return }
@@ -343,29 +344,29 @@ if (Get-ListOrNull $LibTitle) {
     )
     Invoke-Step $LibTitle 'Enable versioning (100 major)' { Set-PnPList -Identity $LibTitle -EnableVersioning $true -MajorVersions 100 | Out-Null }
     foreach ($folder in 'Open Projects', 'Closed Projects', '_Templates') {
-        if (Get-PnPFolder -Url "PermitRecords/$folder" -ErrorAction SilentlyContinue) { Write-Skip "folder $folder exists"; continue }
+        if (Get-OrNull { Get-PnPFolder -Url "PermitRecords/$folder" -ErrorAction Stop }) { Write-Skip "folder $folder exists"; continue }
         Invoke-Step "PermitRecords/$folder" 'Create folder' { Add-PnPFolder -Name $folder -Folder 'PermitRecords' | Out-Null }
     }
 }
 
 # =============================================================================================
 # 4. Groups and permissions
-#    Site level: SUP Owners = Full Control (associated owners group), SUP Coordinators = Edit,
+#    Site level: SUP Owners = Full Control (associated owners group), SUP Coordinators = Contribute,
 #                SUP Compliance / SUP Approving Officials / SUP Viewers = Read.
 #    ComplianceItems + Permit Records: unique perms, SUP Compliance = Contribute.
-#    AuditLog: unique perms, only owners can edit; everyone else Read (flows' connection account must be in SUP Owners).
+#    AuditLog, Settings, ConditionLibrary: unique perms, only owners can edit; everyone else Read (flows' connection account must be in SUP Owners).
 #    NOTE: role names "Full Control/Edit/Contribute/Read" are the English role definition names.
 # =============================================================================================
 Write-Step 'SharePoint groups'
 $Groups = [ordered]@{
     'SUP Owners'             = @{ Role = 'Full Control'; Desc = 'Site owners and flow service account' }
-    'SUP Coordinators'       = @{ Role = 'Edit'; Desc = 'Permit coordinators' }
+    'SUP Coordinators'       = @{ Role = 'Contribute'; Desc = 'Permit coordinators (Contribute, not Edit: Edit would let them delete lists and change columns)' }
     'SUP Compliance'         = @{ Role = 'Read'; Desc = 'Compliance staff (Contribute on ComplianceItems and Permit Records)' }
     'SUP Approving Officials' = @{ Role = 'Read'; Desc = 'Superintendents / approving officials (sign via e-signature or Approvals)' }
     'SUP Viewers'            = @{ Role = 'Read'; Desc = 'Read-only' }
 }
 foreach ($g in $Groups.Keys) {
-    if (Get-PnPGroup -Identity $g -ErrorAction SilentlyContinue) { Write-Skip "group $g exists" }
+    if (Get-OrNull { Get-PnPGroup -Identity $g -ErrorAction Stop }) { Write-Skip "group $g exists" }
     else {
         Invoke-Step $g 'Create group' { New-PnPGroup -Title $g -Description $Groups[$g].Desc | Out-Null }
     }
@@ -377,22 +378,27 @@ Invoke-Step 'SUP Viewers' 'Set as associated visitors group' { Set-PnPGroup -Ide
 Invoke-Step $OwnerEmail 'Add to SUP Owners' { Add-PnPGroupMember -LoginName $OwnerEmail -Group 'SUP Owners' | Out-Null }
 
 Write-Step 'Unique permissions'
-foreach ($l in 'ComplianceItems', $LibTitle) {
-    if (-not (Get-ListOrNull $l)) { continue }
-    Invoke-Step $l 'Break inheritance (copy) and give SUP Compliance Contribute' {
-        Set-PnPList -Identity $l -BreakRoleInheritance -CopyRoleAssignments | Out-Null
-        Set-PnPListPermission -Identity $l -Group 'SUP Compliance' -AddRole 'Contribute' | Out-Null
-        Set-PnPListPermission -Identity $l -Group 'SUP Compliance' -RemoveRole 'Read' | Out-Null
+# Inheritance is broken WITHOUT copying, then every SUP group is granted explicitly. This removes the comm
+# site's default "<Title> Members/Visitors" groups from these lists, so AuditLog really is owners-only edit.
+# Runs only the first time (skipped when the list already has unique permissions), so re-runs never fail on RemoveRole.
+$UniquePerms = [ordered]@{
+    'ComplianceItems' = [ordered]@{ 'SUP Owners' = 'Full Control'; 'SUP Coordinators' = 'Contribute'; 'SUP Compliance' = 'Contribute'; 'SUP Approving Officials' = 'Read'; 'SUP Viewers' = 'Read' }
+    $LibTitle         = [ordered]@{ 'SUP Owners' = 'Full Control'; 'SUP Coordinators' = 'Contribute'; 'SUP Compliance' = 'Contribute'; 'SUP Approving Officials' = 'Read'; 'SUP Viewers' = 'Read' }
+    'AuditLog'        = [ordered]@{ 'SUP Owners' = 'Full Control'; 'SUP Coordinators' = 'Read'; 'SUP Compliance' = 'Read'; 'SUP Approving Officials' = 'Read'; 'SUP Viewers' = 'Read' }
+    'Settings'        = [ordered]@{ 'SUP Owners' = 'Full Control'; 'SUP Coordinators' = 'Read'; 'SUP Compliance' = 'Read'; 'SUP Approving Officials' = 'Read'; 'SUP Viewers' = 'Read' }
+    'ConditionLibrary'= [ordered]@{ 'SUP Owners' = 'Full Control'; 'SUP Coordinators' = 'Read'; 'SUP Compliance' = 'Read'; 'SUP Approving Officials' = 'Read'; 'SUP Viewers' = 'Read' }
+}
+foreach ($l in $UniquePerms.Keys) {
+    $list = Get-OrNull { Get-PnPList -Identity $l -Includes HasUniqueRoleAssignments -ErrorAction Stop }
+    if (-not $list) { continue }
+    if ($list.HasUniqueRoleAssignments) { Write-Skip "$l already has unique permissions (not changed)"; continue }
+    $grants = $UniquePerms[$l]
+    Invoke-Step $l 'Break inheritance (no copy) and grant SUP groups' {
+        Set-PnPList -Identity $l -BreakRoleInheritance | Out-Null
+        foreach ($grp in $grants.Keys) { Set-PnPListPermission -Identity $l -Group $grp -AddRole $grants[$grp] | Out-Null }
     }
 }
-if (Get-ListOrNull 'AuditLog') {
-    Invoke-Step 'AuditLog' 'Break inheritance (copy); Coordinators Edit -> Read' {
-        Set-PnPList -Identity AuditLog -BreakRoleInheritance -CopyRoleAssignments | Out-Null
-        Set-PnPListPermission -Identity AuditLog -Group 'SUP Coordinators' -AddRole 'Read' | Out-Null
-        Set-PnPListPermission -Identity AuditLog -Group 'SUP Coordinators' -RemoveRole 'Edit' | Out-Null
-    }
-    Write-Host '    NOTE: the comm site default "<Site> Members" group (if present) also has Edit — empty it or remove it from AuditLog.' -ForegroundColor Yellow
-}
+Write-Host '    NOTE: SharePoint may add the account running this script directly to these lists; remove it if unwanted.' -ForegroundColor Yellow
 
 # =============================================================================================
 # 5. Seed data
@@ -423,7 +429,7 @@ foreach ($row in Import-Csv (Join-Path $KitPath 'PermitTypes-seed.csv') -Encodin
     }
 }
 $TypeIds = @{}
-Get-PnPListItem -List PermitTypes -PageSize 500 -ErrorAction SilentlyContinue | ForEach-Object { $TypeIds[$_['Title']] = $_.Id }
+Get-OrNull { Get-PnPListItem -List PermitTypes -PageSize 500 -ErrorAction Stop } | ForEach-Object { $TypeIds[$_['Title']] = $_.Id }
 
 Write-Step 'Import ConditionLibrary'
 foreach ($row in Import-Csv (Join-Path $KitPath 'ConditionLibrary-seed.csv') -Encoding utf8) {
@@ -482,7 +488,7 @@ $Views = [ordered]@{
 }
 if (Get-ListOrNull 'Permits') {
     foreach ($v in $Views.Keys) {
-        if (Get-PnPView -List Permits -Identity $v -ErrorAction SilentlyContinue) { Write-Skip "view $v exists"; continue }
+        if (Get-OrNull { Get-PnPView -List Permits -Identity $v -ErrorAction Stop }) { Write-Skip "view $v exists"; continue }
         Invoke-Step "Permits/$v" 'Add view' {
             Add-PnPView -List Permits -Title $v -Fields $Views[$v].Fields -Query $Views[$v].Query -RowLimit 100 -Paged | Out-Null
         }
@@ -530,7 +536,7 @@ if ($ImportSamplePermits) {
             if ($row.$c) { $values[$c] = ([datetime]$row.$c).AddDays($shift).ToString('yyyy-MM-dd') }
         }
         Invoke-Step "Permits/$($row.PermitNumber)" 'Add sample permit + folder' {
-            if (-not (Get-PnPFolder -Url "PermitRecords/$top/$folderName" -ErrorAction SilentlyContinue)) {
+            if (-not (Get-OrNull { Get-PnPFolder -Url "PermitRecords/$top/$folderName" -ErrorAction Stop })) {
                 Add-PnPFolder -Name $folderName -Folder "PermitRecords/$top" | Out-Null
             }
             Add-PnPListItem -List Permits -Values $values | Out-Null

@@ -5,7 +5,7 @@ Internal names have NO spaces (SharePoint internal names are fixed at creation).
 
 ## Site
 - URL: `https://<tenant>.sharepoint.com/sites/SpecialUsePermits`
-- Groups: `SUP Coordinators` (Edit), `SUP Compliance` (Contribute on ComplianceItems + docs, Read on Permits), `SUP Approving Officials` (Read + sign), `SUP Viewers` (Read). `SUP Owners` = site owners.
+- Groups: `SUP Coordinators` (Contribute; Read on Settings, ConditionLibrary and AuditLog), `SUP Compliance` (Contribute on ComplianceItems + docs, Read on Permits), `SUP Approving Officials` (Read + sign), `SUP Viewers` (Read). `SUP Owners` = site owners.
 
 ## Naming convention
 - Permit number: `SUP-{YYYY}-{NNNN}` (year of receipt, 4-digit sequence that resets each year). Example `SUP-2026-0042`.
